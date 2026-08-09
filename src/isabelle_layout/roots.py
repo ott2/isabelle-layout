@@ -226,8 +226,14 @@ class SessionInfo:
         # `directories` clause: extra subdirs to search for theory files
     theories: list[tuple[str, str | None]] = field(default_factory=list)
         # `theories` clause: list of (name, dir_override).
-        # dir_override is the per-theory `in <subdir>` overlaid on
-        # the session-level `in_subdir`; almost always None.
+        #
+        # dir_override is **always None** as parsed.  Isabelle's ROOT grammar
+        # has no per-theory `in` clause -- `theory_entry = theory_name ~
+        # opt_keyword(GLOBAL)` (src/Pure/Build/sessions.scala) -- so a theory
+        # in a subdirectory is written as a path (`"sub/Deep"`) or reached via
+        # `directories`.  The slot survives because it is public shape and
+        # `resolve_session_theory` still honours it for callers that construct
+        # entries themselves.
 
     @property
     def session_dir(self) -> Path:
@@ -311,7 +317,9 @@ def parse_root_sessions(root_path: Path) -> list[SessionInfo]:
     The parser handles:
 
     * Session-level `in <subdir>` and parent (after `=`).
-    * Per-theory `in <subdir>` overrides (`theory Foo in "sub"`).
+    * Path-valued theory names (`theories "sub/Deep"`), which is how
+      Isabelle addresses a theory in a subdirectory — there is no
+      per-theory `in` clause in the ROOT grammar.
     * `(...)`-wrapped options (`session NAME (timing)`,
       `theory Main (global)`) — content inside parens is dropped
       wholesale, so `(global)` doesn't spawn a phantom `global`
@@ -358,16 +366,14 @@ def parse_root_sessions(root_path: Path) -> list[SessionInfo]:
                 state = "session_header"
                 continue
             if val == "in":
-                # Either session-level (right after `session NAME`) or
-                # per-theory (right after a pending theory name).
+                # Session-level only: `session NAME in DIR = PARENT`.  Isabelle
+                # has no per-theory `in` clause (see the class docstring), so
+                # an `in` anywhere else is not a subdirectory override and is
+                # skipped rather than guessed at.
                 target_arg = (i + 1 < len(toks)
                               and toks[i + 1][0] in ("id", "str"))
                 if state == "session_header" and target_arg and cur is not None:
                     cur.in_subdir = toks[i + 1][1]
-                    i += 2
-                    continue
-                if pending_theory is not None and target_arg:
-                    pending_theory = (pending_theory[0], toks[i + 1][1])
                     i += 2
                     continue
                 i += 1

@@ -40,7 +40,6 @@ from __future__ import annotations
 
 import re
 
-_COMMENT_RE = re.compile(r"\(\*.*?\*\)", re.DOTALL)
 _OLD_DESC_RE = re.compile(r"\{\*.*?\*\}", re.DOTALL)
 _OPEN_CARTOUCHE, _CLOSE_CARTOUCHE = r"\<open>", r"\<close>"
 _TAG_RE = re.compile(r"\\<[A-Za-z_^]+>")
@@ -86,7 +85,7 @@ _COMMENT_TOKEN_RE = re.compile(r'\(\*|\*\)')
 def strip_block_comments(text: str) -> str:
     r"""Remove `(* ... *)` comments, which **nest** in Isabelle.
 
-    `_COMMENT_RE` (non-greedy `\(\*.*?\*\)`) stops at the first `*)`, so a
+    The obvious non-greedy regex, `\(\*.*?\*\)`, stops at the first `*)`, so a
     nested comment leaves the outer closer behind as live text.  In
     `Universal_Turing_Machine.GeneratedCode` the header
 
