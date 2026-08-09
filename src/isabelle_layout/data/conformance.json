@@ -1,0 +1,428 @@
+{
+  "schema": 1,
+  "verified_against": "Isabelle2025-2",
+  "cases": [
+    {
+      "id": "plain",
+      "why": "The simplest declaration there is. If this fails nothing else matters.",
+      "root": "session Probe = HOL +\n  theories\n    X\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": [
+            [
+              "X",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quoted-name",
+      "why": "288 of 979 real ROOTs quote the session name. The quotes are not part of it.",
+      "root": "session \"MHComputation\" = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "MHComputation",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "quoted-name-with-dots-and-hyphens",
+      "why": "A quoted name may contain `.` and `-`, and Isabelle session names routinely do (`HOL-Analysis`). Truncating at either renames the session to one that exists, which is the worst kind of wrong answer. This is the valid spelling of the defect found in a hand-rolled parser.",
+      "root": "session \"With.Dots-2\" = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "With.Dots-2",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "groups-in-parens",
+      "why": "`(slow very_slow)` are build groups, not part of the name; 90 real ROOTs carry them. The group names must not leak into the token stream either.",
+      "root": "session Probe (slow very_slow) = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "in-clause",
+      "why": "`in <dir>` says where the theories live, and is not part of the name. 29 real ROOTs use it.",
+      "root": "session Probe in sub = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": "sub",
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "qualified-parent",
+      "why": "The parent is a session name in its own right and may be qualified.",
+      "root": "session Probe = \"HOL-Library\" +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL-Library",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "two-sessions-one-root",
+      "why": "One ROOT may declare many; 37 real ROOTs do, and HOL/ROOT declares dozens. A reader that stops at the first is wrong about most of them.",
+      "root": "session A = HOL +\n\nsession B in sub = A +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "A",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        },
+        {
+          "name": "B",
+          "parent": "A",
+          "in_subdir": "sub",
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "chapter-then-session",
+      "why": "975 of 979 real ROOTs open with `chapter AFP`. It declares no session.",
+      "root": "chapter AFP\n\nsession Probe = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "sessions-clause",
+      "why": "`sessions` names cross-session dependencies without heap inheritance. 550 real ROOTs have one; its entries are not sessions being declared. Both entries name real distribution sessions, because `isabelle sessions` resolves them and would reject an invented one — a semantic complaint, not a syntactic one, and not what this case is about.",
+      "root": "session Probe = HOL +\n  sessions\n    \"HOL-Library\"\n    \"HOL-Algebra\"\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [
+            "HOL-Library",
+            "HOL-Algebra"
+          ],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "directories-clause",
+      "why": "`directories` adds search paths for theory files. 138 real ROOTs use it.",
+      "root": "session Probe = HOL +\n  directories \"sub\" \"other\"\n  theories\n    Deep\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [
+            "sub",
+            "other"
+          ],
+          "theories": [
+            [
+              "Deep",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "theories-block-options",
+      "why": "`theories [document = false]` — block options belong to the block, not to a theory. 134 real ROOTs write this, and `document` is not a theory.",
+      "root": "session Probe = HOL +\n  theories [document = false]\n    X\n    Y\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": [
+            [
+              "X",
+              null
+            ],
+            [
+              "Y",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "path-valued-theory-name",
+      "why": "How Isabelle addresses a theory in a subdirectory — there is no per-theory `in` clause. 127 real ROOTs do this.",
+      "root": "session Probe = HOL +\n  theories\n    \"example/Example\"\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": [
+            [
+              "example/Example",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "theory-global-annotation",
+      "why": "`(global)` marks a theory as globally visible. 13 real ROOTs use it, and `global` is an annotation rather than a second theory.",
+      "root": "session Probe = HOL +\n  theories\n    X (global)\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": [
+            [
+              "X",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "document-files",
+      "why": "969 of 979 real ROOTs end with one. Its arguments are file names, not theories.",
+      "root": "session Probe = HOL +\n  theories\n    X\n  document_files\n    \"root.tex\"\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": [
+            [
+              "X",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "comment-one-line",
+      "why": "A commented-out session declares nothing.",
+      "root": "(* session Retired = HOL + *)\nsession Live = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Live",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "comment-across-lines",
+      "why": "The same, spanning lines, which a line-oriented reader cannot see: it has no state carrying `we are inside a comment` from one line to the next, so the declaration looks live.",
+      "root": "(*\nsession Old = HOL +\n*)\nsession Live = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Live",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "nested-comment",
+      "why": "Isabelle's block comments NEST. A non-greedy `(*.*?*)` closes at the first `*)` and re-exposes the tail of the outer comment, resurrecting exactly the declaration that was commented out.",
+      "root": "(* outer (* inner *)\nsession Ghost = HOL +\n*)\nsession Live = HOL +\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Live",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "description-cartouche",
+      "why": "A `description` cartouche is free text and may contain anything, including the word `session` at the start of a line.",
+      "root": "session Probe = HOL +\n  description \\<open>session Ghost = X\\<close>\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ]
+    },
+    {
+      "id": "comment-inside-theories-block",
+      "why": "15 real ROOTs write the word `in` inside a `theories` stanza; every one of them is in a comment like this.",
+      "root": "session Probe = HOL +\n  theories\n    (* Basic helpers (in util folder) *)\n    X\n",
+      "isabelle": "accepts",
+      "expect": [
+        {
+          "name": "Probe",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": [
+            [
+              "X",
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chapter-definition-only",
+      "why": "AFP's own `thys/ROOT` is exactly this. It declares no session, and that is not an error — a reader that treats an empty result as a failure reports a broken corpus for a well-formed one.",
+      "root": "chapter_definition AFP\n",
+      "isabelle": "accepts",
+      "expect": []
+    },
+    {
+      "id": "empty",
+      "why": "An empty ROOT declares nothing, and must do so by returning an empty list rather than raising. Callers walk trees full of files they did not write, and a reader that throws on one of them cannot finish the walk.",
+      "root": "",
+      "isabelle": "accepts",
+      "expect": []
+    },
+    {
+      "id": "quoted-name-with-spaces",
+      "why": "Isabelle REJECTS this — a session name may not contain spaces or parens. Kept because readers must still agree on what they do with it: the hand-rolled parser truncated at the first space and recorded a build of `Probe (AFP)` against a session named `Probe`, with nothing downstream able to tell. Agreement on malformed input is what stops one reader silently renaming what another built.",
+      "root": "session \"Probe (AFP)\" = HOL +\n",
+      "isabelle": "rejects",
+      "expect": [
+        {
+          "name": "Probe (AFP)",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ],
+      "isabelle_note": "[line 1 of \"<ROOT-DIR>/ROOT\"] error: session name expected, but string was found: \"Probe (AFP)\" ^"
+    },
+    {
+      "id": "bare-name-with-dots-and-hyphens",
+      "why": "Isabelle REJECTS this — `-` is a symbolic identifier, so a bare name cannot contain one; the quoted form above is the legal spelling. Kept for the same reason: the hand-rolled parser truncated it at the first `.` or `-`, turning it into a different, existing session.",
+      "root": "session With.Dots-2 = HOL +\n",
+      "isabelle": "rejects",
+      "expect": [
+        {
+          "name": "With.Dots-2",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ],
+      "isabelle_note": "[line 1 of \"<ROOT-DIR>/ROOT\"] error: keyword \"=\" expected, but symbolic identifier was found: - ^"
+    },
+    {
+      "id": "unterminated-comment",
+      "why": "An unterminated `(*` swallows the rest of the file, which is what Isabelle's lexer does. Guessing otherwise would mean a typo yields a session list nobody can build.",
+      "root": "session A = HOL +\n(* oops\nsession B in sub = A +\n",
+      "isabelle": "rejects",
+      "expect": [
+        {
+          "name": "A",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ],
+      "isabelle_note": "[line 2 of \"<ROOT-DIR>/ROOT\"] error: bad input ^"
+    }
+  ]
+}
