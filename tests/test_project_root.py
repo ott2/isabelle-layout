@@ -143,3 +143,79 @@ def test_start_itself_when_there_is_nothing_to_find(tmp_path):
     lonely = tmp_path / "lonely"
     lonely.mkdir()
     assert default_t_dir(lonely) == lonely.resolve()
+
+
+# ----------------------------------------------------------- the [root-bound]
+
+def test_unbounded_by_default_reaches_a_distant_marker(tmp_path, write_tree):
+    write_tree(tmp_path, {MARKER_NAME: ""})
+    deep = tmp_path / "a" / "b" / "c"
+    deep.mkdir(parents=True)
+    assert default_t_dir(deep) == tmp_path.resolve()
+
+
+def test_a_bound_stops_the_marker_walk(tmp_path, write_tree):
+    """The nesting case, which is why the parameter exists.
+
+    `~/projects/claudecode` holds a marker; `~/projects/claudecode/ndtht` is a
+    separate repository.  A caller for whom overshooting is costly bounds the
+    search at its own project and does not inherit the parent's answer.
+    """
+    write_tree(tmp_path, {MARKER_NAME: "shared-theories\n"})
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    assert default_t_dir(nested) == (tmp_path / "shared-theories").resolve()
+    assert default_t_dir(nested, bound=nested) == nested.resolve()
+
+
+def test_a_bound_is_inclusive(tmp_path, write_tree):
+    # The boundary directory is searched; it is a stopping point, not a wall.
+    write_tree(tmp_path, {"proj/" + MARKER_NAME: "t\n"})
+    start = tmp_path / "proj" / "deep"
+    start.mkdir()
+    proj = tmp_path / "proj"
+    assert default_t_dir(start, bound=proj) == (proj / "t").resolve()
+
+
+def test_a_bound_that_is_not_an_ancestor_searches_only_start(tmp_path, write_tree):
+    """The conservative reading, and the same one `isabelle-watchdog` takes.
+
+    The caller said "do not leave this project".  Discovering we are not in it
+    is a reason to stop looking, not a reason to ignore the instruction.
+    """
+    write_tree(tmp_path, {MARKER_NAME: "t\n"})
+    unrelated = tmp_path / "unrelated"
+    unrelated.mkdir()
+    start = tmp_path / "deep"
+    start.mkdir()
+    assert default_t_dir(start, bound=unrelated) == start.resolve()
+
+
+def test_a_bound_stops_the_root_file_walk_too(tmp_path, write_tree):
+    # Both upward searches honour it; bounding one and not the other would
+    # make the guarantee depend on which tier happened to answer.
+    write_tree(tmp_path, {"ROOT": "session S = HOL\n"})
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    assert default_t_dir(nested) == tmp_path.resolve()
+    assert default_t_dir(nested, bound=nested) == nested.resolve()
+
+
+def test_a_bound_does_not_constrain_the_environment_override(
+        tmp_path, monkeypatch):
+    # An explicit instruction from the operator outranks a search boundary:
+    # the bound guards against accidental discovery, it is not a sandbox.
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    monkeypatch.setenv(ENV_ROOT, str(elsewhere))
+    assert default_t_dir(nested, bound=nested) == elsewhere.resolve()
+
+
+def test_bound_is_keyword_only(tmp_path):
+    # Consumers call `default_t_dir()` and `default_t_dir(path)`; keeping the
+    # positional signature closed means adding this could not silently change
+    # what an existing two-argument call meant.
+    with pytest.raises(TypeError):
+        default_t_dir(tmp_path, tmp_path)

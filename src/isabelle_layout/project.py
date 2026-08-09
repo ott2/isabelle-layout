@@ -46,6 +46,37 @@ records go, not where theories live), so it is genuinely a second file rather
 than a second spelling of this one.  Adding `.isabelle-layout` alongside is
 only justified because the name `.isabelle-query` makes a false claim about
 who the file is for.
+
+How far up to look  [root-bound]
+--------------------------------
+
+The upward walk is unbounded by default and bounded on request: ``bound=``,
+not a policy baked into the search.
+
+Unbounded suits a query tool, where overshooting yields an empty index and an
+obviously wrong answer.  It does not suit every caller.
+`isabelle_watchdog.corpus.find_marker` runs the same search deliberately
+stopped at the project root, and its reason is worth repeating because it is
+about consequences rather than tidiness: a wrong *session* directory produces
+a visibly wrong answer, whereas a wrong *log* directory **creates a dataset in
+it** and pools two repositories' trajectories into one corpus.  Projects nest
+routinely (`~/projects/claudecode/ndtht` inside `~/projects/claudecode`), so a
+stray marker in a shared parent must not capture every repository beneath it.
+
+Those two callers want different searches, and neither is wrong.  A library
+that picks one is a library the other stops using — so the bound is a
+parameter and the caller states which it wants.
+
+What ``bound`` is *not* is a git dependency.  The obvious convenience would be
+``bound="git-toplevel"``, resolved by shelling out.  That would put a
+subprocess in the import path of a parsing library with no runtime
+dependencies, to answer a question the caller already knows the answer to.
+The caller computes the boundary and passes a `Path`; policy stays with the
+policy-maker.
+
+The environment overrides are **not** subject to the bound.  Setting
+``$ISABELLE_LAYOUT_ROOT`` is an explicit instruction from the operator, and a
+search boundary is a guard against accidental discovery, not a sandbox.
 """
 
 from __future__ import annotations
@@ -95,14 +126,31 @@ def _read_marker(marker: Path) -> Path | None:
     return None
 
 
-def _find_marker(start: Path) -> Path | None:
+def _search_chain(start: Path, bound: Path | None) -> list[Path]:
+    """``start`` and its ancestors, stopping at ``bound`` inclusive.
+
+    A ``bound`` that is not an ancestor of ``start`` yields ``[start]`` alone.
+    That is the conservative reading of the request, and the safe one: the
+    caller has said "do not leave this project", so discovering that we are
+    not in it is a reason to stop looking rather than a reason to ignore the
+    instruction and wander.  (`isabelle_watchdog.corpus.find_marker` resolves
+    the same case the same way.)
+    """
+    chain = [start, *start.parents]
+    if bound is None:
+        return chain
+    stop = bound.resolve()
+    return chain[:chain.index(stop) + 1] if stop in chain else [start]
+
+
+def _find_marker(start: Path, bound: Path | None = None) -> Path | None:
     """The nearest project marker at or above ``start``, either spelling.
 
     Both names are tested at each level before moving up, so proximity beats
     spelling: a project's own `.isabelle-query` outranks an ancestor's
     `.isabelle-layout`.  See the module docstring.
     """
-    for d in (start, *start.parents):
+    for d in _search_chain(start, bound):
         for name in MARKER_NAMES:
             marker = d / name
             if marker.is_file():
@@ -110,7 +158,8 @@ def _find_marker(start: Path) -> Path | None:
     return None
 
 
-def default_t_dir(start: Path | None = None) -> Path:
+def default_t_dir(start: Path | None = None, *,
+                  bound: Path | None = None) -> Path:
     """Resolve the Isabelle session directory to index.
 
     Resolution order:
@@ -129,6 +178,13 @@ def default_t_dir(start: Path | None = None) -> Path:
     4. Fall back to ``start`` itself; its theories are then discovered by
        scanning for ROOT files beneath it.
 
+    ``bound``, if given, is a directory the upward searches in steps 2 and 3
+    will not climb above (inclusive).  It does not constrain step 1: an
+    environment variable is an explicit instruction, and the bound guards
+    against accidental discovery rather than sandboxing a deliberate choice.
+    Pass it when overshooting would be *costly* rather than merely wrong —
+    see the module docstring under ``[root-bound]``.
+
     Discovery deliberately does *not* infer a multi-session parent from
     child ``ROOT`` files: a directory holding several ROOTs may be one
     project's sessions or several unrelated projects (e.g. vendored
@@ -141,11 +197,11 @@ def default_t_dir(start: Path | None = None) -> Path:
         if env:
             return Path(env).expanduser().resolve()
     here = (start or Path.cwd()).resolve()
-    marker = _find_marker(here)
+    marker = _find_marker(here, bound)
     if marker is not None:
         named = _read_marker(marker)
         return named if named is not None else marker.parent
-    for d in (here, *here.parents):
+    for d in _search_chain(here, bound):
         if (d / "ROOT").is_file():
             return d
     return here
