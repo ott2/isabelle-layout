@@ -177,6 +177,44 @@ class SessionInfo:
     so tools can enumerate theories and follow cross-session references
     accurately (e.g. resolving a theory that lives under the session's
     `in <subdir>` clause rather than alongside the ROOT file).
+
+    Public, and a compatibility surface forever  [session-info]
+    ----------------------------------------------------------
+
+    Four of the ten public functions take or return this, so it could not
+    have been private without making most of the API unusable — a type you
+    cannot name is a type you cannot annotate, store, or write a helper
+    around.  Declaring it public is therefore recognising a fact rather than
+    granting a privilege, and the useful question is not *whether* it is
+    public but *what about it* is promised.
+
+    **Promised:**
+
+    * Read access to these attributes, under these names, with these types:
+      ``name: str``, ``root_path: Path``, ``in_subdir: str | None``,
+      ``parent: str | None``, ``used_sessions: list[str]``,
+      ``directories: list[str]``, ``theories: list[tuple[str, str | None]]``.
+    * The ``session_dir`` property.
+    * Construction **by keyword**.  New attributes, if any are ever added,
+      arrive with defaults and are appended, so existing keyword construction
+      keeps working untouched.
+
+    **Not promised**, and deliberately so:
+
+    * That it is a ``dataclass``.  Guaranteeing that would silently pin
+      ``asdict``, ``replace``, ``fields()`` and their orderings as API.
+    * Equality, ordering, hashing, or ``repr`` — they are whatever the
+      implementation currently gives.  Two ``SessionInfo`` values comparing
+      equal is not a statement that they name the same session; compare
+      ``(name, root_path)`` if that is the question.
+    * Field *order*.  The names are the contract.
+    * Mutability.  The parser mutates instances while building them; a
+      consumer that does so is on its own.
+
+    The reason for drawing it there: the *names* are what consumers read and
+    what the ROOT file itself justifies, while order, equality and dataclass
+    machinery are incidental to how it happens to be built today.  Promising
+    the incidental parts is how a data holder becomes unchangeable.
     """
     name: str
     root_path: Path             # absolute path of the declaring ROOT file
