@@ -12,8 +12,14 @@ what the package is even called.
 This package's whole premise is being installable by other people.  So the
 install path is the one under test:
 
-    python3 -m venv .venv && .venv/bin/pip install -e '.[test]'
+    python3 -m venv .venv && .venv/bin/pip install '.[test]'
     .venv/bin/python -m pytest
+
+Not `-e`, either.  An editable install still maps the source tree, so it would
+answer "is the conformance corpus present?" by looking at the repository --
+and a corpus that is correct in `src/` and missing from the wheel is a corpus
+no consumer can use.  The cost is having to reinstall after editing `src/`,
+which is cheap and is the point.
 """
 
 from __future__ import annotations
