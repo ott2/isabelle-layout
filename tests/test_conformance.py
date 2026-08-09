@@ -92,13 +92,29 @@ def test_every_case_says_why_it_exists(case):
     assert len(case["why"]) > 40
 
 
-def test_the_rejected_cases_carry_isabelles_complaint(tmp_path):
+@pytest.mark.parametrize(
+    "case", [c for c in CASES if c["isabelle"] == "rejects"],
+    ids=[c["id"] for c in CASES if c["isabelle"] == "rejects"])
+def test_the_rejected_cases_carry_isabelles_complaint(case):
     """A "rejects" case is only meaningful with the reason attached — it is
-    the evidence that the verdict came from the prover and not from an
-    assumption."""
-    for case in CASES:
-        if case["isabelle"] == "rejects":
-            assert "error" in case["isabelle_note"] or "Bad" in case["isabelle_note"]
+    the evidence that the verdict came from the prover rather than from an
+    assumption, and the reasons are not all of one kind.  Three of these are
+    syntax errors; `two-sessions-sharing-a-directory` parses perfectly and is
+    refused for a *semantic* reason.  Matching on the word "error" would have
+    quietly excluded exactly the case that makes the distinction.
+    """
+    note = case["isabelle_note"]
+    assert len(note) > 20
+    assert "ROOT" in note  # Isabelle located the complaint in the file
+
+
+def test_a_rejected_case_may_still_have_been_parsed_correctly():
+    """`rejects` means `isabelle build` refuses the file — NOT that a reader
+    which parsed it got the wrong answer.  Blurring those would make the
+    corpus unusable for the robustness half of its job."""
+    case = next(c for c in CASES if c["id"] == "two-sessions-sharing-a-directory")
+    assert case["isabelle"] == "rejects"
+    assert conformance.session_names(case) == ["A", "B"]  # the correct parse
 
 
 # ------------------------------------------------- the defects it was born of

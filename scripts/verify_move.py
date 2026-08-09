@@ -16,6 +16,18 @@ cases nobody thought of.
     ~/projects/query/.venv/bin/python scripts/verify_move.py ~/repos/afp/thys
 
 Exit 0 iff nothing disagreed.
+
+**This script expires, and says so rather than lying.**  Once `isabelle-query`
+depends on this package, `isabelle_query.common` re-exports it, and the two
+"implementations" are the same function objects -- so the comparison passes
+vacuously and reports 0 disagreements over 68362 checks that all compared a
+function with itself.  A verification tool that cannot fail is worse than none,
+because the number it prints looks exactly like the real one.  So it checks
+first and refuses.  To reproduce the original run, check `isabelle-query` out
+at its last pre-split commit:
+
+    git -C ~/projects/query stash
+    git -C ~/projects/query checkout 4d8b4dc -- src/isabelle_query/common.py
 """
 
 from __future__ import annotations
@@ -54,7 +66,22 @@ def as_tuple(s) -> tuple:
             s.used_sessions, s.directories, s.theories, s.session_dir)
 
 
+def refuse_if_self_comparing() -> bool:
+    """True if `isabelle_query.common` is now a re-export of this package.
+
+    Identity, not equality: after the split the two names bind the *same*
+    function object, and every comparison below would then be `f(x) == f(x)`.
+    """
+    return old.parse_root_sessions is new.parse_root_sessions
+
+
 def main(argv: list[str]) -> int:
+    if refuse_if_self_comparing():
+        print("REFUSING: `isabelle_query.common` now re-exports isabelle_layout,\n"
+              "so this would compare every function with itself and report 0\n"
+              "disagreements without checking anything.  See the module docstring\n"
+              "for how to check out a pre-split `common.py`.")
+        return 2
     corpora = [Path(p).expanduser() for p in argv[1:]] or \
         [Path("~/repos/afp/thys").expanduser()]
     r = Report()

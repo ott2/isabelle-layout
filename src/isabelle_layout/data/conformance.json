@@ -423,6 +423,31 @@
         }
       ],
       "isabelle_note": "[line 2 of \"<ROOT-DIR>/ROOT\"] error: bad input ^"
+    },
+    {
+      "id": "two-sessions-sharing-a-directory",
+      "why": "Parses cleanly and still will not build: two sessions in one directory is a semantic error, not a syntactic one, so `isabelle sessions` rejects a ROOT whose session list this package reads correctly. Kept because it is the distinction the `isabelle` field would otherwise blur — `rejects` means `isabelle build` refuses the file, NOT that a reader which parsed it got the wrong answer. Adding `in sub` to the second declaration is the buildable form, covered above.",
+      "root": "session A = HOL +\n\nsession B = A +\n",
+      "isabelle": "rejects",
+      "expect": [
+        {
+          "name": "A",
+          "parent": "HOL",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        },
+        {
+          "name": "B",
+          "parent": "A",
+          "in_subdir": null,
+          "used_sessions": [],
+          "directories": [],
+          "theories": []
+        }
+      ],
+      "isabelle_note": "Duplicate use of directory \"<ROOT-DIR>\" for session \"A\" (line 1 of \"<ROOT-DIR>/ROOT\") vs. session \"B\" (line 3 of \"<ROOT-DIR>/ROOT\")"
     }
   ]
 }

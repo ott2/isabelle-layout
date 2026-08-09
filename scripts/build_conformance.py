@@ -163,6 +163,15 @@ CASES: list[tuple[str, str, str]] = [
      "Isabelle's lexer does. Guessing otherwise would mean a typo yields a "
      "session list nobody can build.",
      "session A = HOL +\n(* oops\nsession B in sub = A +\n"),
+    ("two-sessions-sharing-a-directory",
+     "Parses cleanly and still will not build: two sessions in one directory "
+     "is a semantic error, not a syntactic one, so `isabelle sessions` rejects "
+     "a ROOT whose session list this package reads correctly. Kept because it "
+     "is the distinction the `isabelle` field would otherwise blur — "
+     "`rejects` means `isabelle build` refuses the file, NOT that a reader "
+     "which parsed it got the wrong answer. Adding `in sub` to the second "
+     "declaration is the buildable form, covered above.",
+     "session A = HOL +\n\nsession B = A +\n"),
 ]
 
 

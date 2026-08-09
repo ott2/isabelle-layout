@@ -62,6 +62,14 @@ Isabelle distribution      18 ROOTs   135 sessions   1851 theories
 68362 comparisons, 0 disagreements
 ```
 
-`scripts/verify_move.py` reproduces it for as long as `isabelle-query` still
-carries the original. After that the conformance corpus is what remains, which
-is the argument for the corpus being a shipped artefact.
+`scripts/verify_move.py` produced it, and **can no longer reproduce it**:
+`isabelle_query.common` now re-exports this package, so the two
+"implementations" are the same function objects and the comparison would pass
+vacuously — 68,362 checks of a function against itself, printing the same
+number as the real run. The script detects that and refuses rather than
+reporting a result it did not earn. Reproducing it means checking `common.py`
+out at `isabelle-query`'s last pre-split commit.
+
+That expiry is the argument for the conformance corpus being a shipped
+artefact rather than a script: the corpus keeps working when the thing it was
+differenced against is gone.
