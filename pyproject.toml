@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "isabelle-layout"
+dynamic = ["version"]
+description = "What structure an Isabelle project has, according to its own files — sessions, theory headers, and project roots read from ROOT files and .thy headers, with no Isabelle process involved."
+readme = "README.md"
+# 3.9, not 3.10, because `isabelle-query` declares 3.9 and is about to depend
+# on this package.  A library whose floor is higher than its first consumer's
+# is a library that consumer cannot adopt, which is the exact problem this
+# split exists to fix.
+requires-python = ">=3.9"
+license = { text = "MIT" }
+# Authored by András Salamon, with Claude Opus 4.6, 4.7, 4.8, and 5.
+authors = [
+    { name = "András Salamon", email = "Andras.Salamon@st-andrews.ac.uk" },
+]
+keywords = [
+    "isabelle", "isar", "theorem-proving", "formal-verification",
+    "afp", "root", "session", "parser",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# No runtime dependencies, deliberately, and this is load-bearing rather than
+# tidy.  The package exists so that tools with hard constraints of their own
+# can adopt a correct ROOT parser; `isabelle-watchdog` runs beside a build and
+# takes no runtime dependencies at all, because anything it imports is
+# something that can break one.  A parsing library that pulls in a tree is one
+# such consumers route around -- and routing around is what produced the
+# divergent hand-rolled parsers this package is meant to end.
+dependencies = []
+
+# A *test* dependency is not a runtime one: nothing under `tests/` is
+# installed or imported by the package.
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/ott2/isabelle-layout"
+Source = "https://github.com/ott2/isabelle-layout"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# --strict-markers: a typo in `@pytest.mark.corpuss` would otherwise silently
+# mark nothing, and `-m "not corpus"` would then run the slow test anyway --
+# the failure mode being guarded against is a marker that quietly does nothing.
+addopts = "-ra --strict-markers"
+markers = [
+    "corpus: needs a real Isabelle/AFP checkout on disk (skipped without one)",
+]
+
+# Single-sourced in the package, not stated here, so `isabelle_layout.__version__`
+# is correct even when the package is imported from a source tree that was never
+# installed.  Deriving it from `importlib.metadata` instead raises
+# `PackageNotFoundError` in exactly that case.
+[tool.hatch.version]
+path = "src/isabelle_layout/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/isabelle_layout"]
+
+[tool.hatch.build.targets.sdist]
+# `docs/` ships with the source because the decisions recorded there are the
+# reason several functions look the way they do, and `tests/` because the
+# conformance corpus is only half a deliverable without the code that checks
+# this package against it.
+include = ["src/", "docs/", "tests/", "README.md", "LICENSE"]

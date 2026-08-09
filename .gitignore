@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments.  `.venv/` is the throwaway install target the test
+# instructions use -- the suite is run against a real `pip install .`, never
+# against `PYTHONPATH=src`, so a venv is a working file rather than a artefact.
+.venv/
+venv/
+
+# Editor / OS / agent
+.claude/*
+!.claude/memory/
+.DS_Store
+
+# Pytest / lint caches
+.pytest_cache/
+.ruff_cache/
+
+# End-of-session handoff scratchpad -- rewritten each session.
+prompt.md
