@@ -38,7 +38,7 @@ both siblings put it.
 | `[session-info]` | Is `SessionInfo` public, and what is guaranteed? | Public — four of the ten public functions take or return it. Guaranteed: the seven attribute *names* and types, `session_dir`, and keyword construction. Not guaranteed: dataclass-ness, equality, ordering, hashing, `repr`, field order, mutability. |
 | `[root-bound]` | How far up does the search for a project root go? | As far as the caller says. Unbounded by default, `bound=` on request. Not a git dependency: the caller computes the boundary and passes a `Path`. |
 
-## The decision at 0.1.1
+## The decision at 0.2.0
 
 | Tag | Question | Answer |
 |-----|----------|--------|

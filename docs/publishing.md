@@ -30,8 +30,8 @@ Then tag the commit the artefacts were built from, and push the tag
 separately — `git push` does not push tags:
 
 ```sh
-git tag -a v0.1.0 -m "isabelle-layout 0.1.0"
-git push origin v0.1.0
+git tag -a v0.2.0 -m "isabelle-layout 0.2.0"
+git push origin v0.2.0
 ```
 
 Tag *before* uploading, so the tag names the tree that produced the artefacts.
@@ -63,7 +63,7 @@ token can publish anything you own, so it should exist for one upload only.
 
 The long-term answer is **Trusted Publishing** — GitHub Actions authenticates
 to PyPI over OIDC and no token exists to leak. It needs a workflow file, which
-is the CI deliberately deferred at 0.1.0. Set it up when the CI matrix lands;
+is the CI deliberately deferred for this release. Set it up when that lands;
 it also works for a project that does not yet exist, via a *pending publisher*.
 
 ---
@@ -137,7 +137,7 @@ stops a future dependency being silently satisfied by a stranger's package.
 actually renders on a project page, that the upload credentials work, and that
 a real `pip install` from an index yields an importable package with its data
 files. **What it does not prove:** anything about real PyPI's state — and note
-that it consumes version `0.1.0` on TestPyPI, so a second rehearsal needs a
+that it consumes version `0.2.0` on TestPyPI, so a second rehearsal needs a
 different version.
 
 ---
@@ -176,24 +176,27 @@ python3 -m venv /tmp/real
 ## Part 6 — after the first upload
 
 - [ ] Create a project-scoped API token; **revoke the account-scoped one**.
-- [ ] Cut a GitHub Release against `v0.1.0` (optional; the tag is the record).
+- [ ] Cut a GitHub Release against `v0.2.0` (optional; the tag is the record).
 - [ ] Add the CI matrix. `requires-python = ">=3.9"` and the classifiers
       through 3.14 are currently verified *statically only* — every module
       parses under `ast.parse(feature_version=(3, 9))`, all carry
       `from __future__ import annotations`, and there is no runtime PEP 604,
       no match statement and no post-3.9 stdlib call. Only 3.14 is installed
       on this machine. This is the first thing to add after release.
-- [ ] Tell `isabelle-query` the floor is real: it pins
-      `isabelle-layout>=0.1.0,<0.2.0` against a package that did not exist on
-      an index until now.
+- [x] `isabelle-query`'s upper bound. It declared
+      `isabelle-layout>=0.1.0,<0.2.0`, which `0.2.0` does not satisfy, and with
+      0.1.x never published there was no earlier release to fall back to.
+      Already fixed upstream (`>=0.2.0`, floor only) before this release —
+      nothing to do, but check it still reads that way before uploading, since
+      a cap is the one thing that can make a correct publish unusable.
 
 ---
 
 ## What cannot be undone
 
 - **A version number is permanent.** PyPI refuses a file for a version it has
-  already seen, even after the release is deleted. A bad `0.1.0` is fixed by
-  publishing `0.1.1`, never by re-uploading. This is the only genuinely
+  already seen, even after the release is deleted. A bad `0.2.0` is fixed by
+  publishing `0.2.1`, never by re-uploading. This is the only genuinely
   unrecoverable step, and it is why the rehearsal is worth one evening.
 - **The author email becomes public** on the project page and in the metadata
   of every downloaded artefact.

@@ -16,14 +16,14 @@ is a distribution problem, not a code problem. `README.md` argues the case at
 length; `isabelle-layout-prompt.md` is the original brief and the normative
 statement of scope.
 
-## Status: v0.1.1, complete and unpublished
+## Status: v0.2.0, complete and unpublished
 
 The package is built, tested, and ready to release. Everything in the brief's
 definition of done is met.
 
 | | |
 |---|---|
-| Version | `0.1.1`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Version | `0.2.0`, single-sourced in `src/isabelle_layout/__init__.py` |
 | Tests | 219, passing against a real install |
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
 | AFP agreement | 988 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
@@ -32,11 +32,16 @@ definition of done is met.
 | Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
 | PyPI | name is free; **not yet published** |
 
-**0.1.1 rather than 0.2.0** although the CLI is a feature: 0.1.0 was never
-published, so this is the first release the world sees, and nothing was removed
-or changed in behaviour. `isabelle-query` also caps at `<0.2.0` today, which a
-minor bump would strand — but that cap is the thing to fix rather than a reason
-to pick a version, and there is a report for its maintainer saying so.
+**0.2.0, because a console script is a feature.** Nothing was removed and no
+behaviour changed, so a patch level would have resolved too — but the version
+should describe the release, and nothing external argues otherwise now.
+`isabelle-query`'s `<0.2.0` cap was briefly a reason to stay at 0.1.x; that was
+circular, since the cap is the thing to fix. Note the consequence, which is now
+sharp rather than theoretical: **0.2.0 does not satisfy `<0.2.0`**, so on the
+day this publishes, `isabelle-query` cannot install its own dependency until
+the cap is relaxed. `.scratch-query-drop-the-upper-bound.md` is the report;
+0.1.0 and 0.1.1 were never published, so there is no earlier release to fall
+back to.
 
 **The one remaining step before publishing** is creating
 `https://github.com/ott2/isabelle-layout`, which the package metadata already
@@ -48,8 +53,8 @@ version number.
 TestPyPI rehearsal, upload, and what cannot be undone. Follow it rather than
 the one-liner it replaced, which said nothing about credentials or ordering.
 
-CI was **deliberately deferred** (the user chose "publish 0.1.0 now, CI
-after"). Consequence to remember: `requires-python = ">=3.9"` and the
+CI was **deliberately deferred** (the choice was "publish now, CI after").
+Consequence to remember: `requires-python = ">=3.9"` and the
 classifiers through 3.14 are verified *statically only* — every module parses
 under `ast.parse(feature_version=(3, 9))`, all carry
 `from __future__ import annotations`, and there is no runtime PEP 604, no
@@ -255,10 +260,10 @@ have their own maintainers. If work here turns up a bug there, write it up as
 a bug report for that project rather than patching it — the one exception
 already taken was the original split, which had to touch `query` by design.
 
-`isabelle-query` currently depends on `isabelle-layout>=0.1.0,<0.2.0` and
-re-exports it from `isabelle_query.common`, so its consumers did not move on
-the day of the split. Its suite (864 tests) passes against this package;
-re-run it after any change to the public API:
+`isabelle-query` declares `isabelle-layout>=0.2.0` — floor, no ceiling, since
+its `59345b2` — and re-exports this package from `isabelle_query.common`, so
+its consumers did not move on the day of the split. Its suite (877 tests)
+passes against 0.2.0; re-run it after any change to the public API:
 
 ```sh
 cd ~/projects/query && .venv/bin/pip install -q ~/projects/isabelle-layout \
@@ -268,6 +273,32 @@ cd ~/projects/query && .venv/bin/pip install -q ~/projects/isabelle-layout \
 Note the AFP load set moved 9,907 → 9,910 with `[session-dirs]`, so downstream
 census numbers shift by three theories. That is a fix, not a regression, and
 it is owed to them as feedback.
+
+### The open question — `[layout-privates]`
+
+Dropping its cap made `isabelle-query` look at what it actually imports, and
+the answer is a finding about **this** package: of the 24 names
+`isabelle_query/common.py` takes, **eight are underscore-private** —
+`_tokenize_root`, `_resolve_thy_file`, `_parse_root_theories`,
+`_parse_root_directories`, `_read_marker`, `_INFRA_ROOTS`, `_THY_HEADER_RE`,
+`_NONHOL_DISTRIBUTION_BASES` — plus `_classify_import`, `LEGACY_MARKER_NAME`,
+and the whole of `_lexer`. Its `tests/test_layout_surface.py` now pins them
+from the outside, resolving each through `importlib` so a removal names the
+casualty instead of failing as one `ImportError` from whichever test imported
+first.
+
+**This package's rule is that the public API is named by evidence — what
+consumers actually import.** By that rule the surface is currently wrong, and
+no version range fixes it: a *patch* release may move any of those names.
+
+Not a 0.2.0 blocker — nothing here moved them, so the exposure is exactly
+what it was before — but settle it before the next change to any of them. Both
+obvious answers fight recorded decisions: promoting `_classify_import` reverses
+the documented reason it is private (an analysis judgement, not a reading of a
+file), and promoting `_INFRA_ROOTS` publishes the name list `distribution.py`
+exists to keep separable. A third option is an explicitly-unstable
+`isabelle_layout._compat` naming exactly these, which keeps the judgement
+private while making the dependency legible and breakage deliberate.
 
 ## Conventions
 
