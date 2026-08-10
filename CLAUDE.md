@@ -16,20 +16,27 @@ is a distribution problem, not a code problem. `README.md` argues the case at
 length; `isabelle-layout-prompt.md` is the original brief and the normative
 statement of scope.
 
-## Status: v0.1.0, complete and unpublished
+## Status: v0.1.1, complete and unpublished
 
 The package is built, tested, and ready to release. Everything in the brief's
 definition of done is met.
 
 | | |
 |---|---|
-| Version | `0.1.0`, single-sourced in `src/isabelle_layout/__init__.py` |
-| Tests | 206, passing against a real install |
+| Version | `0.1.1`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Tests | 219, passing against a real install |
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
-| AFP closure | 9,910 theories / 988 sessions — `CLOSED` |
-| Distribution closure | 1,824 theories / 135 sessions — `CLOSED` |
+| AFP agreement | 988 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
+| Distribution agreement | 132 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
+| CLI | `isabelle-layout`, a console script; touches every public name |
 | Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
 | PyPI | name is free; **not yet published** |
+
+**0.1.1 rather than 0.2.0** although the CLI is a feature: `isabelle-query`
+pins `isabelle-layout>=0.1.0,<0.2.0`, so a minor bump would drop it out of the
+range on the day this ships. Nothing was removed and nothing changed
+behaviour, so the patch level is honest as well as convenient. 0.1.0 was never
+published, so this is the first release the world sees.
 
 **The one remaining step before publishing** is creating
 `https://github.com/ott2/isabelle-layout`, which the package metadata already
@@ -118,6 +125,7 @@ git log --grep='\[marker-name\]'
 | `[session-info]` | `SessionInfo` is public; the field **names** and types are the contract. Not dataclass-ness, equality, ordering, `repr`, field order, or mutability. |
 | `[root-bound]` | The upward search is unbounded by default and bounded by `bound=` on request. Not a git dependency — the caller computes the boundary. |
 | `[session-dirs]` | Two closure holes, fixed. See `docs/decisions.md`; `[infra-shadow]` is the second and lives in the same commit. |
+| `[demo-cli]` | Ships as a **console script**, not `python -m` and not an unshipped example. Bounded by a rule enforced in `tests/test_cli.py`: every flag reaches a public function, and no private name is imported. |
 
 ## Commands
 
@@ -127,6 +135,7 @@ python3 -m venv .venv
 .venv/bin/python -m pytest
 .venv/bin/python -m pytest tests/test_conformance.py -x
 .venv/bin/python -m pytest -k "marker or bound" -x
+.venv/bin/isabelle-layout --self-check     # smoke-test the installed wheel
 ```
 
 **Reinstall after editing `src/`.** The suite runs against an installed wheel
@@ -175,75 +184,69 @@ over both corpora first — including the containment check that showed 0
 `directories` entries escape the ROOT's own directory, which is what made
 widening the index safe.
 
-## Next: a lightweight wrapper script
+## The CLI — `[demo-cli]`, decided
 
-The planned work. **Goal: executable documentation.** The package has ten
-public functions and no runnable demonstration of them — `README.md` has
-snippets, the probes exercise three, and `verify_move.py` no longer runs. A
-small script that uses the API the way a consumer would is worth more than
-more prose, and it doubles as a smoke test that an installed wheel works.
+`isabelle-layout` ships as a **console script** (`[project.scripts]` →
+`isabelle_layout._cli:main`). It exists for two readers: a maintainer wanting
+executable documentation of the API, and an **LLM orienting itself in a
+repository that carries Isabelle proofs as ancillary artefacts** — a growing
+case, and one that discovers a command on `PATH` but not an import path. That
+second reader is why the weaker `python -m` option was not taken.
 
-### The open decision — `[demo-cli]`
-
-**Does it ship, and as what?** This is in real tension with the package's
-identity, so decide it deliberately and record it before writing much code.
-
-| Option | Cost |
-|---|---|
-| `[project.scripts]` console script | A second public surface — flags, output format, exit codes — versioned forever. A name on `PATH`. The strongest invitation to grow into a tool. |
-| `python -m isabelle_layout` (`__main__.py`) | Ships in the wheel, so it can smoke-test an install and is discoverable, but claims no name on `PATH` and is a weaker promise. **Probably the right middle.** |
-| `examples/` in the sdist only | Zero promise, zero risk — and almost nobody sees it, and it cannot verify an install. |
-
-The thing being protected: `isabelle-layout` is a *library with no opinions
-beyond what the files state*. A CLI has opinions. The failure mode is becoming
-`isabelle-query`-lite, at which point the split that created this package was
-pointless.
-
-### A design rule worth adopting
-
-**The demo should touch every public name.** That gives a crisp completeness
-criterion, and it tests the API rather than the implementation: if the script
-cannot be written without reaching for a private import, the public surface is
-wrong and that is the finding.
-
-### Constraints, and one measured fact
-
-- **Stdlib only.** `argparse` and `pathlib`. The no-runtime-dependencies rule
-  is load-bearing, and a demo that violated it would be a poor advertisement.
-- **`follow_imports` is the expensive part, by 70×.** Measured over the AFP:
-  `iter_sessions` 0.31s, `session_theories` ~7s for all 988 sessions, ~0.1s
-  with `follow_imports=False`. So stream output per session rather than
-  collecting, and consider making the closure opt-in — a user asking "what
-  sessions are here?" should not wait for an import walk.
-- **Follow `wc-theories.py`'s shape**, in `~/projects/claudecode/ndtht/bin`:
-  argparse, `-R/--root` defaulting to `default_t_dir()`, dedupe by resolved
-  path, quiet default with a `--verbose` expansion.
-
-### A sketch of the output, to argue with
+**What bounds it is a rule, not restraint: every flag exists to reach a public
+function.** So the command cannot grow without the library growing first, and
+"would this need a new public function?" has an answer. `tests/test_cli.py`
+enforces the rule by AST — every name in `__all__`, plus both distribution
+predicates and `conformance`, must be *imported and referenced*, and no
+private name may be reached at all.
 
 ```
 $ isabelle-layout ~/repos/afp/thys/AODV
-AODV                      AODV/ROOT
-  parent        AWN
-  base logic    HOL          (HOL-family)
-  directories   variants/a_norreqid, variants/b_fwdrreps
-  declared      1 theory
-  builds        73 theories
+AODV
+  root         ROOT
+  parent       AWN
+  base logic   AWN  (not a distribution logic; the parent chain probably leaves the scanned directory)
+  directories  variants/a_norreqid, variants/b_fwdrreps, …
+  declared     1 theory   All
+  builds       73 theories
 ```
 
-That one view exercises `iter_sessions`, `SessionInfo`, `session_theories`,
-`resolve_base_logic` and `is_hol_base`. `default_t_dir` comes from the no-
-argument case, `parse_thy_imports` and `resolve_session_theory` from a
-`--verbose` per-theory listing, and `conformance` from a `--self-check` mode.
-`discover_roots` and `iter_thy_files` need a reason to appear — if none can be
-found, that is worth knowing about the API.
+| Flag | Public name it reaches |
+|---|---|
+| *(default)* | `iter_sessions`, `SessionInfo`, `session_theories`, `resolve_base_logic`, `resolve_session_theory`, `is_hol_base`, `is_known_nonhol_base` |
+| *(no PATH)* | `default_t_dir` |
+| *(PATH is a ROOT)* | `parse_root_sessions` |
+| `-v` | `parse_thy_imports` |
+| `--roots` | `discover_roots` |
+| `--files` | `iter_thy_files` |
+| `--self-check` | `conformance` |
+| `-l`, `--no-closure` | none — they *withhold* the 70× cost |
+
+**The finding the exercise produced**, which was its point: `iter_thy_files` is
+the weakest-justified name on the surface. `iter_sessions` + `session_theories`
+subsume it except for the one thing `--files` uses — declared theories, ROOT
+order, deduplicated, no closure. Real, but narrow. If 0.2 ever revisits the
+surface, that is the name to revisit.
+
+Two behaviours worth keeping:
+
+- **Base logic reports three states, not two.** `is_hol_base` and
+  `is_known_nonhol_base` are not each other's negation, so a base that is
+  neither is said to be neither. Pointing at one AFP entry gives
+  `AWN (not a distribution logic…)`; pointing at `~/repos/afp/thys` gives
+  `HOL (HOL family)`, because the parent chain is now in scope. The message
+  says so instead of guessing.
+- **A declared theory with no file on disk is flagged.** Isabelle refuses to
+  build that ROOT; a reader that silently returned fewer theories would give a
+  plausible, short answer.
 
 ### What not to build
 
 No proof parsing, no call graph, no entry counting, no dead-code analysis, no
 output formats beyond plain text. Those are `isabelle-query`'s job and it does
 them well. If a flag would need `.thy` *bodies* rather than headers, it is out
-of scope.
+of scope. Stdlib only — `argparse` and `pathlib`; the no-runtime-dependencies
+rule is load-bearing and a demo that broke it would be a poor advertisement.
 
 ## Working boundaries
 

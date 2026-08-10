@@ -56,6 +56,16 @@ test = ["pytest>=7"]
 Homepage = "https://github.com/ott2/isabelle-layout"
 Source = "https://github.com/ott2/isabelle-layout"
 
+# `[demo-cli]`.  A console script is a second public surface -- flags, output
+# format, exit codes -- and claiming a name on PATH is the strongest invitation
+# for a library with no opinions to grow into a tool with many.  It ships
+# because every flag it has exists to reach a *public function*, so the command
+# cannot grow without the library growing first; `src/isabelle_layout/_cli.py`
+# argues that at length.  Private module on purpose: the command is the
+# interface, not `main`.
+[project.scripts]
+isabelle-layout = "isabelle_layout._cli:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # --strict-markers: a typo in `@pytest.mark.corpuss` would otherwise silently

@@ -24,6 +24,44 @@ No runtime dependencies, deliberately: the package exists so that tools with
 hard constraints of their own can adopt a correct ROOT parser rather than
 hand-roll a regex. Python 3.9 and up.
 
+## Command line
+
+`pip install` puts `isabelle-layout` on your `PATH`. One command answers "what
+Isabelle is in this tree?" — the question you have when orienting yourself in a
+repository that carries proofs as ancillary artefacts.
+
+```
+$ isabelle-layout ~/repos/afp/thys/Ordinary_Differential_Equations
+/…/Ordinary_Differential_Equations — 1 ROOT file, 7 sessions
+
+Ordinary_Differential_Equations
+  root         ROOT
+  parent       HOL-Analysis
+  base logic   HOL-Analysis  (HOL family)
+  uses         HOL-Decision_Procs, Triangle, List-Index, Affine_Arithmetic
+  directories  Library, IVP
+  declared     1 theory   ODE_Analysis
+  builds       17 theories
+…
+```
+
+| | |
+|---|---|
+| `-l, --list` | one line per session; skips the import closure, which costs ~70× the rest |
+| `-v, --verbose` | every theory a session builds, with its imports |
+| `--no-closure` | omit `builds` |
+| `--roots` | the `ROOT` files, one per line |
+| `--files` | the declared theory files — a session's entry points — one per line |
+| `--self-check` | check this installation against the conformance corpus inside it |
+
+With no `PATH` it uses `default_t_dir()`. Exit status: 0 found something, 1
+found nothing, 2 bad usage.
+
+Every flag exists to reach a public function, and a test enforces that. The
+command is a demonstration of the library, not a tool in its own right — for
+analysis of the proofs themselves (call graphs, dead code, entry census),
+`isabelle-query` is the tool.
+
 ## API
 
 | | |

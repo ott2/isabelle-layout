@@ -38,6 +38,12 @@ both siblings put it.
 | `[session-info]` | Is `SessionInfo` public, and what is guaranteed? | Public — four of the ten public functions take or return it. Guaranteed: the seven attribute *names* and types, `session_dir`, and keyword construction. Not guaranteed: dataclass-ness, equality, ordering, hashing, `repr`, field order, mutability. |
 | `[root-bound]` | How far up does the search for a project root go? | As far as the caller says. Unbounded by default, `bound=` on request. Not a git dependency: the caller computes the boundary and passes a `Path`. |
 
+## The decision at 0.1.1
+
+| Tag | Question | Answer |
+|-----|----------|--------|
+| `[demo-cli]` | Does the demonstration ship, and as what? | A **console script**, `isabelle-layout`. Not `python -m` (the second reader — an LLM orienting itself in a repository — discovers a name on `PATH`, not an import path), and not an unshipped example (which cannot verify an install). What bounds it is a rule rather than restraint: every flag reaches a public function, so the command cannot grow without the library growing first. |
+
 ## Corrections after the first release was prepared
 
 | Tag | Fault | Found by |
@@ -84,6 +90,7 @@ These are pinned by tests, so they cannot drift; the test is the record.
 | `run_guarded` did not move | `test_run_guarded_did_not_come_along` |
 | `SessionInfo.theories`' `dir_override` is always `None` — Isabelle has no per-theory `in` clause | `test_the_dir_override_slot_is_always_none` |
 | The conformance corpus is in the *wheel*, not just the repository | `test_the_corpus_ships_inside_the_installed_package` |
+| The CLI reaches every public name and no private one — so it cannot grow without the library growing first | `test_the_demonstration_touches_every_public_name`, `test_no_private_name_was_needed` |
 
 ## The one number worth keeping
 
