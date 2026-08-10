@@ -219,8 +219,21 @@ def _classify_import(name: str, session: SessionInfo,
 
     sess = _import_session(raw)
     if sess is None:  # bare: an in-entry theory, or an unqualified base
-        if raw in _INFRA_ROOTS:
-            return ("infra", None)
+        # Resolution decides, and `_INFRA_ROOTS` is deliberately NOT consulted
+        # first.  A bare name that resolves to a file the session owns *is*
+        # that file, whatever it is called: `src/CCL` is a session named `CCL`
+        # whose `Term.thy` imports `CCL`, meaning `CCL/CCL.thy`.  Short-
+        # circuiting on the name lost it, and with it everything reachable
+        # only through it -- 6 theories across `CCL`, `Cube` and `Sequents`.
+        # The name list still governs *qualified* imports below, where there
+        # is no local file to check against.
+        #
+        # Safe because owning such a name is rare and unambiguous when it
+        # happens: across the AFP and the distribution exactly 12 sessions
+        # hold a theory named like a distribution logic, 11 of them the object
+        # logic defining itself (`ZF/ZF.thy`), and the twelfth an AFP entry
+        # with its own `Sequents.thy`.  Measured over both corpora: the AFP
+        # load set is unchanged at 9,910, the distribution gains 6, none lost.
         p = (stem_index.get(raw) if stem_index is not None
              else resolve_session_theory(session, raw))
         return ("in_entry", p) if p is not None else ("infra", None)
@@ -235,6 +248,37 @@ def _classify_import(name: str, session: SessionInfo,
     return ("cross_entry", None)
 
 
+def _theory_search_roots(session: SessionInfo) -> list[Path]:
+    """The directories a session's theory files may live in.
+
+    The session directory, plus every `directories` entry that lands *outside*
+    it.  Entries inside it are already covered, because the session directory
+    is scanned recursively; adding them would mean re-walking a tree to learn
+    nothing.
+
+    The clause is not decoration.  `HOL-ODE-Numerics` declares
+    ``in "Numerics"`` and ``directories "../Refinement"``, and indexing only
+    the session directory left its bare imports into `../Refinement`
+    unresolvable — see `[session-dirs]`.  Six such entries exist across the
+    AFP and the distribution (three sessions); the other 147 `directories`
+    entries stay inside the session directory, which is why this went
+    unnoticed.
+
+    Order matches :func:`~isabelle_layout.roots.resolve_session_theory`: the
+    session directory first, then each declared directory in declaration
+    order, so the two agree about which file a name resolves to when more than
+    one matches.
+    """
+    base = session.session_dir
+    roots = [base]
+    resolved_base = base.resolve()
+    for d in session.directories:
+        target = (base / d).resolve()
+        if resolved_base not in (target, *target.parents):
+            roots.append(target)
+    return roots
+
+
 def session_theories(session: SessionInfo, *,
                      follow_imports: bool = True,
                      ) -> list[tuple[str, Path]]:
@@ -244,9 +288,10 @@ def session_theories(session: SessionInfo, *,
     block (resolved via :func:`~isabelle_layout.roots.resolve_session_theory`).
     When ``follow_imports`` (the default), also includes the transitive closure
     of their **in-entry** imports — bare-name imports that resolve to a ``.thy``
-    within the session's own directory — so a session that declares a few
-    leaf theories and pulls the rest in via ``imports`` (common in the AFP:
-    ``AODV`` declares 1, builds 73) is counted in full.
+    in one of the session's own directories, meaning the session directory and
+    anything the ROOT's ``directories`` clause adds to it — so a session that
+    declares a few leaf theories and pulls the rest in via ``imports`` (common
+    in the AFP: ``AODV`` declares 1, builds 73) is counted in full.
 
     Cross-entry (dot-qualified, another session) and infrastructure
     (``HOL*``/``Pure``/…) imports are **not** followed: over the whole AFP
@@ -259,11 +304,13 @@ def session_theories(session: SessionInfo, *,
     from the declared roots; deduplicated by resolved path.
     """
     stem_index: dict[str, Path] = {}
-    base = session.session_dir
-    if follow_imports and base.is_dir():
+    if follow_imports:
         # One directory scan → O(1) in-entry resolution for every bare import.
-        for p in base.rglob("*.thy"):
-            stem_index.setdefault(p.stem, p)
+        for scan_root in _theory_search_roots(session):
+            if not scan_root.is_dir():
+                continue
+            for p in scan_root.rglob("*.thy"):
+                stem_index.setdefault(p.stem, p)
 
     out: list[tuple[str, Path]] = []
     seen: set[Path] = set()

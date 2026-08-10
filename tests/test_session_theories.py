@@ -117,6 +117,62 @@ def test_infra_bare_and_qualified_skipped(demo):
     assert _classify_import("HOL-Library.FuncSet", session)[0] == "infra"
 
 
+def test_a_session_keeps_a_theory_named_like_a_distribution_logic(
+        tmp_path, write_tree):
+    """`[infra-shadow]`.  A bare name that resolves to a file the session owns
+    *is* that file, whatever it is called.
+
+    `src/CCL` is a session named `CCL` whose `Term.thy` imports `CCL`, meaning
+    `CCL/CCL.thy`.  Consulting the hardcoded infrastructure name list before
+    trying to resolve the name discarded it, and with it everything reachable
+    only through it — 6 theories across `CCL`, `Cube` and `Sequents`.
+    """
+    write_tree(tmp_path, {
+        "CCL/ROOT": "session CCL = Pure +\n  theories\n    Term\n",
+        "CCL/Term.thy": "theory Term imports CCL begin\nend\n",
+        "CCL/CCL.thy": "theory CCL imports Gfp begin\nend\n",
+        "CCL/Gfp.thy": "theory Gfp imports Pure begin\nend\n",
+    })
+    (session,) = parse_root_sessions(tmp_path / "CCL" / "ROOT")
+    stems = {p.stem for _n, p in session_theories(session)}
+    assert stems == {"Term", "CCL", "Gfp"}  # not just {"Term"}
+
+
+def test_a_bare_name_that_resolves_nowhere_is_still_infrastructure(demo):
+    # The other half of the same change: dropping the name-list shortcut must
+    # not make `Main` in-entry for an entry that has no `Main.thy`.
+    _root, session = demo
+    assert _classify_import("Main", session)[0] == "infra"
+    assert _classify_import("Pure", session)[0] == "infra"
+
+
+def test_the_closure_follows_a_directories_entry_outside_the_session_dir(
+        tmp_path, write_tree):
+    """`[session-dirs]`.  The `directories` clause is part of where a
+    session's theories live, so the index that resolves bare imports has to
+    cover it.
+
+    `HOL-ODE-Numerics` declares `in "Numerics"` and
+    `directories "../Refinement"`; indexing only the session directory left
+    its bare imports into `../Refinement` unresolvable, and the load set was
+    not closed — `Refinement/Autoref_Misc.thy` was reached by relative path
+    while the `Refine_Dflt_No_Comp` it imports by bare name was not.
+    """
+    write_tree(tmp_path, {
+        "Entry/ROOT": 'session Num in "Numerics" = HOL +\n'
+                      '  directories "../Refinement"\n'
+                      '  theories\n    Top\n',
+        "Entry/Numerics/Top.thy": 'theory Top imports "../Refinement/Mid" begin\nend\n',
+        "Entry/Refinement/Mid.thy": "theory Mid imports Deep begin\nend\n",
+        "Entry/Refinement/Deep.thy": "theory Deep imports Main begin\nend\n",
+    })
+    (session,) = parse_root_sessions(tmp_path / "Entry" / "ROOT")
+    stems = {p.stem for _n, p in session_theories(session)}
+    # `Deep` is reached only by a bare import from a file in a declared
+    # directory that sits outside the session directory.
+    assert stems == {"Top", "Mid", "Deep"}
+
+
 def test_path_import_cannot_escape_entry(demo):
     # A path climbing above the entry root resolves to no in-entry theory
     # (containment guard), so it is not followed.
