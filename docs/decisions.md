@@ -38,6 +38,18 @@ both siblings put it.
 | `[session-info]` | Is `SessionInfo` public, and what is guaranteed? | Public — four of the ten public functions take or return it. Guaranteed: the seven attribute *names* and types, `session_dir`, and keyword construction. Not guaranteed: dataclass-ness, equality, ordering, hashing, `repr`, field order, mutability. |
 | `[root-bound]` | How far up does the search for a project root go? | As far as the caller says. Unbounded by default, `bound=` on request. Not a git dependency: the caller computes the boundary and passes a `Path`. |
 
+## Corrections after the first release was prepared
+
+| Tag | Fault | Found by |
+|-----|-------|----------|
+| `[session-dirs]` | `session_theories` indexed only the session directory, ignoring the ROOT's `directories` clause, so bare imports into a declared directory outside it were unresolvable. AFP load set 9,907 → 9,910, 0 lost. | Reported by `isabelle-query`'s maintainer |
+| `[infra-shadow]` | `_INFRA_ROOTS` was consulted before the filesystem, so a session owning a theory named like a distribution logic (`CCL/CCL.thy`) lost it. Distribution +6, AFP unchanged. | `scripts/probe_discovery_closure.py`, after the above |
+
+Both landed in the commit tagged `[session-dirs]` — `git log --grep='\[session-dirs\]'`
+finds the reasoning for each. They are listed separately because they are two
+different faults that happened to share a symptom, and a reader chasing one
+should not have to know the other's name.
+
 ## Standing decisions, recorded in code rather than here
 
 These are pinned by tests, so they cannot drift; the test is the record.
