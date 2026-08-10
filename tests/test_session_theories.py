@@ -173,6 +173,38 @@ def test_the_closure_follows_a_directories_entry_outside_the_session_dir(
     assert stems == {"Top", "Mid", "Deep"}
 
 
+def test_a_directories_entry_may_leave_the_root_directory(tmp_path, write_tree):
+    """`[session-dirs]`.  A `directories` entry is *not* confined to the ROOT's
+    own directory, because Isabelle does not confine it.
+
+    The fix for `[session-dirs]` was proposed with a guard rejecting any entry
+    outside the ROOT directory, on the reasoning that it mirrors the
+    containment `_classify_import` applies to relative-path imports and stops a
+    malformed ROOT reaching into a neighbour.  Put to `isabelle build -n`, the
+    ROOT below builds: `info.dirs` is ``dir :: directories`` with no
+    containment (`Pure/Build/sessions.scala`), so the guard would drop
+    `Neighbour` and reintroduce the reported bug in a rarer shape.
+
+    What actually prevents a session reaching into a neighbour is enforced
+    globally instead: Isabelle maps each canonical directory to one session and
+    errors ``Duplicate use of directory`` if two claim the same one, so the
+    corpus the guard defends against is one `isabelle build` refuses.
+
+    No ROOT in the AFP or the distribution declares such an entry (0 of 153),
+    so this is pinned by construction rather than by corpus.
+    """
+    write_tree(tmp_path, {
+        "EntryA/ROOT": 'session A in "Sub" = HOL +\n'
+                       '  directories\n    "../../Shared"\n'
+                       '  theories\n    T\n',
+        "EntryA/Sub/T.thy": "theory T imports Neighbour begin end\n",
+        "Shared/Neighbour.thy": "theory Neighbour imports Main begin end\n",
+    })
+    (session,) = parse_root_sessions(tmp_path / "EntryA" / "ROOT")
+    stems = {p.stem for _n, p in session_theories(session)}
+    assert stems == {"T", "Neighbour"}
+
+
 def test_path_import_cannot_escape_entry(demo):
     # A path climbing above the entry root resolves to no in-entry theory
     # (containment guard), so it is not followed.

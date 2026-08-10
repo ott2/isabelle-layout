@@ -50,6 +50,28 @@ finds the reasoning for each. They are listed separately because they are two
 different faults that happened to share a symptom, and a reader chasing one
 should not have to know the other's name.
 
+One part of the reported fix was **declined**, and the test
+`test_a_directories_entry_may_leave_the_root_directory` says why: a
+`directories` entry is not confined to the ROOT's own directory, because
+Isabelle does not confine it. Adding the proposed guard would drop theories
+from a ROOT `isabelle build` accepts.
+
+## The oracle, and what it is allowed to disagree about
+
+`scripts/probe_against_isabelle.py` compares `session_theories` against
+`isabelle build -n -l` — the dependency resolution the real build performs.
+The two answer slightly different questions, so the comparison is asymmetric,
+which is what lets it fail for the right reasons:
+
+| | must be | Isabelle2025-2 |
+|---|---|---|
+| we return a file the build does not read | 0 | **0** (AFP), **0** (distribution) |
+| the build reads a file we omit, *inside* the session's own directories | 0 | **0** (AFP), **0** (distribution) |
+| the build reads a file we omit, outside them — another session's theory | any | 10,850 (AFP), 471 (distribution) |
+
+The third row is the no-double-counting property, not a defect: `HOL` reads
+`Tools/Code_Generator.thy`, which the `Tools` session owns.
+
 ## Standing decisions, recorded in code rather than here
 
 These are pinned by tests, so they cannot drift; the test is the record.

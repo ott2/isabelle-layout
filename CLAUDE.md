@@ -137,7 +137,8 @@ repository, which is the one question that most needs asking — and two
 
 | Script | Purpose |
 |---|---|
-| `scripts/probe_discovery_closure.py` | The load-set invariant over a real corpus. Run after touching `session_theories`, `_classify_import`, or the header parser. Expect `CLOSED`. |
+| `scripts/probe_against_isabelle.py` | **The strongest check there is**: `session_theories` against `isabelle build -n -l`, the real build's own dependency resolution. Expect `AGREES`. Needs Isabelle; ~5 min for the AFP. |
+| `scripts/probe_discovery_closure.py` | The load-set invariant over a real corpus. Needs no prover, and so can run anywhere — but a set uniformly too small satisfies it. Expect `CLOSED`. |
 | `scripts/build_conformance.py` | Regenerates the corpus, putting every case to `isabelle sessions -d`. Needs Isabelle on PATH. |
 | `scripts/verify_move.py` | **Expired.** It differenced this package against the pre-split `isabelle_query.common`; that module now re-exports this one, so the comparison would be a function against itself. It detects this and refuses. |
 
@@ -145,10 +146,22 @@ repository, which is the one question that most needs asking — and two
 
 **Correctness is checked against Isabelle semantics, not against prior
 behaviour.** Hand-compute the expected value, or ask the prover, and then make
-the code match. `isabelle sessions -d DIR -a` is the oracle: it is the same
-session-structure reader `isabelle build` uses, and it will tell you whether a
-ROOT is even legal. Using it is how we learnt that two of the eight seed
-conformance cases are inputs Isabelle *rejects*.
+the code match. There are two oracles, and they answer different questions:
+
+- **`isabelle sessions -d DIR -a`** — what a ROOT *declares*, and whether it is
+  even legal. Using it is how we learnt that two of the eight seed conformance
+  cases are inputs Isabelle *rejects*.
+- **`isabelle build -n -l`** — what a session *loads*, file by file. This is
+  the authority for `session_theories`, and it settles questions that reading
+  `Pure/Build/sessions.scala` only half-answers. It established that a
+  `directories` entry may leave the ROOT's own directory, that a bare import is
+  looked up in the declared directories and not recursively, and that two
+  sessions claiming one directory is an error Isabelle raises
+  (`Duplicate use of directory`) rather than something a reader must guard
+  against.
+
+Both corpora agree with the second oracle exactly — 0 over-claims and 0 misses
+inside a session's own directories, over 988 AFP and 132 distribution sessions.
 
 - `~/repos/afp/thys` — the AFP (Isabelle2025-2), 988 sessions, 9,910 theories
 - `~/repos/isabelle/src` — the distribution, 135 sessions, 1,824 theories
