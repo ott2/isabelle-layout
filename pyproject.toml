@@ -81,4 +81,9 @@ packages = ["src/isabelle_layout"]
 # reason several functions look the way they do, and `tests/` because the
 # conformance corpus is only half a deliverable without the code that checks
 # this package against it.
-include = ["src/", "docs/", "tests/", "README.md", "LICENSE"]
+#
+# `scripts/` because `docs/decisions.md` and `isabelle_layout.conformance` both
+# tell the reader to run `scripts/build_conformance.py` to regenerate the
+# corpus against a newer Isabelle.  An sdist that omits the script named in its
+# own documentation is an sdist whose documentation is wrong.
+include = ["src/", "docs/", "scripts/", "tests/", "README.md", "LICENSE"]

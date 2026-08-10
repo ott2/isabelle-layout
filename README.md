@@ -100,10 +100,12 @@ repositories actually import.
 `from isabelle_layout.distribution import is_hol_base, is_known_nonhol_base`
 for the two distribution predicates.
 
-Everything else is private and stays changeable. `__all__` is
-[pinned by a test](tests/test_public_api.py), so adding to the surface is a
-deliberate act and removing from it fails loudly — which is precisely what
-`common` could not do.
+Everything else is private and stays changeable. `__all__` is pinned by a test
+(`tests/test_public_api.py`), so adding to the surface is a deliberate act and
+removing from it fails loudly — which is precisely what `common` could not do.
+
+The package ships `py.typed`, so the annotations above are visible to type
+checkers rather than decorative.
 
 ### Why `session_theories` and not a `*.thy` glob
 
@@ -177,8 +179,8 @@ answers "is the package data present?" by looking at the repository — which is
 the one question that most needs asking, since a corpus correct in `src/` and
 absent from the wheel is a corpus no consumer can use.
 
-Design decisions live in commit messages, indexed by
-[`docs/decisions.md`](docs/decisions.md) and findable by tag:
+Design decisions live in commit messages, indexed by `docs/decisions.md` and
+findable by tag:
 
 ```sh
 git log --grep='\[marker-name\]'

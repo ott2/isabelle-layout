@@ -103,9 +103,23 @@ def path() -> Path:
     """Filesystem path of the corpus, for a consumer that would rather read
     the JSON itself than import anything.
 
-    Raises if the package is installed somewhere without a real path (a zip
-    import); use :func:`load` there.
+    Raises :class:`FileNotFoundError` if this installation has no real file to
+    point at — a zip import, or any loader that is not the filesystem one.
+    Use :func:`load` there, which works either way.
+
+    Note what this does *not* do.  The obvious implementation is
+    ``with resources.as_file(...) as p: return Path(p)``, and it is wrong in
+    exactly the case this function exists to handle: for a non-filesystem
+    loader ``as_file`` extracts to a temporary file and **deletes it when the
+    context exits**, so the returned path would name a file that no longer
+    exists.  The caller then gets a `Path` that fails on open, at some
+    distance from the cause.  Failing here, with a reason, is the whole value
+    of having a separate accessor rather than exposing the Traversable.
     """
     from importlib import resources
-    with resources.as_file(resources.files(DATA_PACKAGE) / DATA_NAME) as p:
-        return Path(p)
+    resource = resources.files(DATA_PACKAGE) / DATA_NAME
+    if isinstance(resource, Path) and resource.is_file():
+        return resource
+    raise FileNotFoundError(
+        f"{DATA_PACKAGE}/{DATA_NAME} is not a real file on this installation "
+        f"({type(resource).__name__}); use isabelle_layout.conformance.load()")

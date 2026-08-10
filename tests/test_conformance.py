@@ -66,6 +66,48 @@ def test_the_corpus_ships_inside_the_installed_package():
     assert conformance.path().name == "conformance.json"
 
 
+def test_path_refuses_rather_than_returning_a_file_that_is_about_to_vanish(
+        monkeypatch):
+    """A zip-imported installation has no real path, and the honest answer is
+    an exception.
+
+    The tempting implementation — `with resources.as_file(...) as p: return p`
+    — extracts to a temporary file and deletes it on context exit, handing
+    back a `Path` that fails on open somewhere far from the cause.  Simulated
+    with a `zipfile.Path`, which is what `resources.files()` yields for a
+    zip-imported package.
+    """
+    import zipfile
+    from importlib import resources
+
+    buf = tmp_zip()
+    fake = zipfile.Path(zipfile.ZipFile(buf)) / "conformance.json"
+    monkeypatch.setattr(resources, "files", lambda _pkg: fake.parent)
+
+    with pytest.raises(FileNotFoundError, match="conformance.json"):
+        conformance.path()
+    # ...and the loader that does not need a path is unaffected.
+    assert json_loads_ok(fake.read_text())
+
+
+def tmp_zip():
+    """An in-memory zip holding a one-case corpus."""
+    import io
+    import json
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("conformance.json",
+                   json.dumps({"schema": 1, "verified_against": "Isabelle2025-2",
+                               "cases": []}))
+    return buf
+
+
+def json_loads_ok(text: str) -> bool:
+    import json
+    return json.loads(text)["schema"] == 1
+
+
 def test_the_corpus_records_what_it_was_verified_against():
     # A consumer has to be able to tell how old the ground truth is.
     data = conformance.load()
