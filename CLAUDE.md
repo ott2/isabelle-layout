@@ -28,16 +28,18 @@ definition of done is met.
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
 | AFP closure | 9,910 theories / 988 sessions — `CLOSED` |
 | Distribution closure | 1,824 theories / 135 sessions — `CLOSED` |
-| Packaging | `twine check` passes on wheel and sdist; `py.typed` shipped |
+| Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
 | PyPI | name is free; **not yet published** |
 
 **The one remaining step before publishing** is creating
 `https://github.com/ott2/isabelle-layout`, which the package metadata already
-points at and which currently 404s. Then:
+points at and which currently 404s — a release published before it exists ships
+metadata whose own link is dead, and metadata cannot be corrected without a new
+version number.
 
-```sh
-rm -rf dist && python -m build && twine check dist/* && twine upload dist/*
-```
+**`docs/publishing.md` is the runbook**: repository, tag, token, optional
+TestPyPI rehearsal, upload, and what cannot be undone. Follow it rather than
+the one-liner it replaced, which said nothing about credentials or ordering.
 
 CI was **deliberately deferred** (the user chose "publish 0.1.0 now, CI
 after"). Consequence to remember: `requires-python = ">=3.9"` and the
