@@ -32,11 +32,11 @@ definition of done is met.
 | Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
 | PyPI | name is free; **not yet published** |
 
-**0.1.1 rather than 0.2.0** although the CLI is a feature: `isabelle-query`
-pins `isabelle-layout>=0.1.0,<0.2.0`, so a minor bump would drop it out of the
-range on the day this ships. Nothing was removed and nothing changed
-behaviour, so the patch level is honest as well as convenient. 0.1.0 was never
-published, so this is the first release the world sees.
+**0.1.1 rather than 0.2.0** although the CLI is a feature: 0.1.0 was never
+published, so this is the first release the world sees, and nothing was removed
+or changed in behaviour. `isabelle-query` also caps at `<0.2.0` today, which a
+minor bump would strand — but that cap is the thing to fix rather than a reason
+to pick a version, and there is a report for its maintainer saying so.
 
 **The one remaining step before publishing** is creating
 `https://github.com/ott2/isabelle-layout`, which the package metadata already

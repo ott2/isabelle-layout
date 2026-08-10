@@ -90,6 +90,24 @@ sessions it declares is a fact about the file; deciding which of a theory's
 imports count as "infrastructure" is an analysis judgement, and belongs to the
 tool doing the analysis.
 
+### Compatibility — pin a floor, not a ceiling
+
+What is promised, so you do not have to guess:
+
+- **`__all__` is pinned by a test.** A name cannot leave the surface by
+  accident; a removal is deliberate and arrives with a minor bump.
+- **`SessionInfo`'s field names and types are the contract** — not its
+  dataclass-ness, equality, ordering, `repr`, field order or mutability.
+  New attributes, if any are ever added, are appended with defaults, so
+  keyword construction keeps working.
+- **No runtime dependencies**, so nothing arrives transitively.
+
+A `<0.2.0`-style upper bound is not needed for that and costs more than it
+saves. It cannot detect a break — only prevent an install — and it propagates
+to your own consumers, who then inherit a ceiling they did not choose. What
+detects a break is running your test suite against this package; a version
+range only decides when you are allowed to find out.
+
 ### Why `session_theories` and not a `*.thy` glob
 
 A ROOT usually under-states what a session builds. AFP's `AODV` declares
