@@ -30,13 +30,27 @@ Then tag the commit the artefacts were built from, and push the tag
 separately — `git push` does not push tags:
 
 ```sh
-git tag -a v0.2.0 -m "isabelle-layout 0.2.0"
-git push origin v0.2.0
+git tag -a v0.2.1 -F release-notes.md    # the tag message IS the release notes
+git push origin v0.2.1
 ```
+
+**Put the release notes in the tag's own message.** An annotated tag is a real
+git object with an arbitrary body, so `gh release create v0.2.1
+--notes-from-tag` builds the GitHub Release from it and the notes live in one
+place. This is also why the release *commit* does not need to be a summary of
+user-visible changes: the tag is the thing that describes what shipped, and
+they have different audiences — the log records how the work happened.
 
 Tag *before* uploading, so the tag names the tree that produced the artefacts.
 If the upload then fails and something has to change, the fix is a new version,
 not a moved tag — a tag that moves after being pushed is worse than no tag.
+
+**Do not `--amend` a release commit that has been pushed, ever.** It leaves the
+branch a *sibling* of what the remote has rather than a descendant, so the next
+push is rejected and the only ways out are a force-push or a reconciling
+merge — both worse than the imperfect message that prompted it. This cost the
+0.2.0 number. Version numbers before first publication are free; history that
+other people may have fetched is not.
 
 Untracked working files (`.scratch-*`, `dist/`, `.venv/`) are not pushed.
 
@@ -137,7 +151,7 @@ stops a future dependency being silently satisfied by a stranger's package.
 actually renders on a project page, that the upload credentials work, and that
 a real `pip install` from an index yields an importable package with its data
 files. **What it does not prove:** anything about real PyPI's state — and note
-that it consumes version `0.2.0` on TestPyPI, so a second rehearsal needs a
+that it consumes version `0.2.1` on TestPyPI, so a second rehearsal needs a
 different version.
 
 ---
@@ -176,7 +190,10 @@ python3 -m venv /tmp/real
 ## Part 6 — after the first upload
 
 - [ ] Create a project-scoped API token; **revoke the account-scoped one**.
-- [ ] Cut a GitHub Release against `v0.2.0` (optional; the tag is the record).
+- [ ] Cut the GitHub Release: `gh release create v0.2.1 --notes-from-tag`.
+      A pushed tag is *not* a Release — the Release is a separate GitHub-side
+      object attached to the tag, and only it produces notes, a feed entry and
+      the Releases page.
 - [ ] Add the CI matrix. `requires-python = ">=3.9"` and the classifiers
       through 3.14 are currently verified *statically only* — every module
       parses under `ast.parse(feature_version=(3, 9))`, all carry
@@ -195,8 +212,8 @@ python3 -m venv /tmp/real
 ## What cannot be undone
 
 - **A version number is permanent.** PyPI refuses a file for a version it has
-  already seen, even after the release is deleted. A bad `0.2.0` is fixed by
-  publishing `0.2.1`, never by re-uploading. This is the only genuinely
+  already seen, even after the release is deleted. A bad `0.2.1` is fixed by
+  publishing `0.2.2`, never by re-uploading. This is the only genuinely
   unrecoverable step, and it is why the rehearsal is worth one evening.
 - **The author email becomes public** on the project page and in the metadata
   of every downloaded artefact.

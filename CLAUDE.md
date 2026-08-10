@@ -16,14 +16,14 @@ is a distribution problem, not a code problem. `README.md` argues the case at
 length; `isabelle-layout-prompt.md` is the original brief and the normative
 statement of scope.
 
-## Status: v0.2.0, complete and unpublished
+## Status: v0.2.1, complete and unpublished
 
 The package is built, tested, and ready to release. Everything in the brief's
 definition of done is met.
 
 | | |
 |---|---|
-| Version | `0.2.0`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Version | `0.2.1`, single-sourced in `src/isabelle_layout/__init__.py` |
 | Tests | 219, passing against a real install |
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
 | AFP agreement | 988 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
@@ -32,16 +32,16 @@ definition of done is met.
 | Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
 | PyPI | name is free; **not yet published** |
 
-**0.2.0, because a console script is a feature.** Nothing was removed and no
-behaviour changed, so a patch level would have resolved too — but the version
-should describe the release, and nothing external argues otherwise now.
-`isabelle-query`'s `<0.2.0` cap was briefly a reason to stay at 0.1.x; that was
-circular, since the cap is the thing to fix. Note the consequence, which is now
-sharp rather than theoretical: **0.2.0 does not satisfy `<0.2.0`**, so on the
-day this publishes, `isabelle-query` cannot install its own dependency until
-the cap is relaxed. `.scratch-query-drop-the-upper-bound.md` is the report;
-0.1.0 and 0.1.1 were never published, so there is no earlier release to fall
-back to.
+**The minor moved to 0.2 because a console script is a feature**; nothing was
+removed and no behaviour changed. `isabelle-query`'s old `<0.2.0` cap was
+briefly a reason to stay at 0.1.x, which was circular since the cap was the
+thing to fix — it now declares `>=0.2.0`, floor only, and 0.2.1 satisfies it.
+
+**0.1.0, 0.1.1 and 0.2.0 were never published**, so 0.2.1 is the first version
+the world sees and there is no earlier release to fall back to. Those numbers
+were spent locally rather than wasted: version numbers before first publication
+are free, and spending one is always cheaper than editing history to reclaim it
+— see **Conventions**.
 
 **The one remaining step before publishing** is creating
 `https://github.com/ott2/isabelle-layout`, which the package metadata already
@@ -263,7 +263,7 @@ already taken was the original split, which had to touch `query` by design.
 `isabelle-query` declares `isabelle-layout>=0.2.0` — floor, no ceiling, since
 its `59345b2` — and re-exports this package from `isabelle_query.common`, so
 its consumers did not move on the day of the split. Its suite (877 tests)
-passes against 0.2.0; re-run it after any change to the public API:
+passes against this build; re-run it after any change to the public API:
 
 ```sh
 cd ~/projects/query && .venv/bin/pip install -q ~/projects/isabelle-layout \
@@ -291,7 +291,7 @@ first.
 consumers actually import.** By that rule the surface is currently wrong, and
 no version range fixes it: a *patch* release may move any of those names.
 
-Not a 0.2.0 blocker — nothing here moved them, so the exposure is exactly
+Not a release blocker — nothing here moved them, so the exposure is exactly
 what it was before — but settle it before the next change to any of them. Both
 obvious answers fight recorded decisions: promoting `_classify_import` reverses
 the documented reason it is private (an analysis judgement, not a reading of a
@@ -305,6 +305,13 @@ private while making the dependency legible and breakage deliberate.
 - **Module docstrings carry the reasoning**, at length, at the top of the
   file — why the module exists and what went wrong without it. Match the
   register of `isabelle_watchdog/roots.py`, which argues its own existence.
+- **Never rewrite history.** No `git commit --amend`, no `git reset`, no
+  force-push, and no merge whose purpose is to repair an earlier rewrite. A
+  pushed commit with an imperfect message stays as it is: *"no-one is grading
+  our work; our users care about releases being good quality and not how they
+  got there."* If something about a release needs restating, add — a new
+  commit, a new version, or an annotated tag whose message carries the release
+  notes. An `--amend` of an already-pushed release commit is what cost 0.2.0.
 - **Commits**: small, single-concern, frequent, with the reasoning in the
   message and a stable `[tag]` when it is a decision. Do not push unless
   asked. Trailer, verbatim:

@@ -73,7 +73,7 @@ from .theories import (
 # is imported from a source tree that was never installed.  Deriving it from
 # `importlib.metadata` instead would raise `PackageNotFoundError` in exactly
 # that case.
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "SessionInfo",
