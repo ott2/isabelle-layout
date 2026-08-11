@@ -1,8 +1,24 @@
 # Publishing a release
 
-Written for the first release, when none of it was habit yet. Everything here
-is checkable, so where a step exists to prevent a specific failure, the failure
-is named.
+Written for the first release, when none of it was habit yet, and kept because
+the parts that bit are not the parts anyone expects. Everything here is
+checkable, so where a step exists to prevent a specific failure, the failure is
+named.
+
+*Not shipped in the sdist:* this is our release process, not something anyone
+downloading the source needs — see `exclude` in `pyproject.toml`.
+
+## The short version, now that the repository exists
+
+```sh
+# 1. drop the `.dev0` from src/isabelle_layout/__init__.py
+# 2. commit, with the RELEASE NOTES as the commit message
+git push origin main
+git push origin vX.Y.Z            # triggers the Release workflow
+rm -rf dist && python -m build && twine check --strict dist/* && twine upload dist/*
+```
+
+The rest of this file is why each of those is shaped the way it is.
 
 ## The order, and why it is not arbitrary
 
@@ -75,23 +91,24 @@ Untracked working files (`.scratch-*`, `dist/`, `.venv/`) are not pushed.
 2. **Enable 2FA** — PyPI requires it for uploads. Save the recovery codes
    somewhere you will still have them after losing the phone.
 
-### The token, and why the first one is different
+### The token
 
-PyPI scopes API tokens to a project, but it cannot scope one to a project that
-does not exist yet. So the first upload needs an **account-scoped** token:
+**`isabelle-layout` now exists on PyPI, so use a token scoped to it.** Account
+settings → *API tokens* → *Add API token*, scope `isabelle-layout`. It is shown
+exactly once — `pypi-AgEIcHlwaS5vcmc…` — so copy it immediately.
 
-* Account settings → *API tokens* → *Add API token*
-* Scope: **Entire account**
-* Copy it immediately — `pypi-AgEIcHlwaS5vcmc…`. It is shown exactly once.
+The awkward step is only ever the *first* upload of a project, and it is
+already paid here: PyPI cannot scope a token to a project that does not exist,
+so 0.2.2 needed an **account-scoped** token. That token can publish anything
+you own and should have been revoked straight after.
 
-After the first successful upload, create a token scoped to
-`isabelle-layout` and **revoke the account-scoped one**. An account-scoped
-token can publish anything you own, so it should exist for one upload only.
-
-The long-term answer is **Trusted Publishing** — GitHub Actions authenticates
-to PyPI over OIDC and no token exists to leak. It needs a workflow file, which
-is the CI deliberately deferred for this release. Set it up when that lands;
-it also works for a project that does not yet exist, via a *pending publisher*.
+**For the next new project** — `isabelle-query`, `isabelle-watchdog` — do not
+repeat that. Register a **pending publisher** instead: Account settings →
+*Publishing* → the project name plus GitHub owner, repo, workflow filename and
+environment, all before the project exists. The first upload then comes from
+Actions over OIDC, creates the project, and no token is needed at any point.
+That is **Trusted Publishing**, and it also removes the token from this laptop
+for projects already published.
 
 ---
 

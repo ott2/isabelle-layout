@@ -16,42 +16,45 @@ is a distribution problem, not a code problem. `README.md` argues the case at
 length; `isabelle-layout-prompt.md` is the original brief and the normative
 statement of scope.
 
-## Status: v0.2.2, complete and unpublished
+## Status: 0.2.2 published; `main` is 0.2.3.dev0
 
-The package is built, tested, and ready to release. Everything in the brief's
-definition of done is met.
+**`isabelle-layout` 0.2.2 is on PyPI** and installs clean: `pip install
+isabelle-layout` in an empty venv gives the console script on `PATH` and a
+passing `--self-check`. `main` has moved on and says so — `0.2.3.dev0`, because
+a tree that is not the published release must not claim to be it.
 
 | | |
 |---|---|
-| Version | `0.2.2`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Version | `0.2.3.dev0`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Published | **0.2.2**, PyPI and GitHub, 11 Aug 2026 |
 | Tests | 219, passing against a real install |
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
 | AFP agreement | 988 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
 | Distribution agreement | 132 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
 | CLI | `isabelle-layout`, a console script; touches every public name |
 | Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
-| PyPI | name is free; **not yet published** |
 
-**The minor moved to 0.2 because a console script is a feature**; nothing was
-removed and no behaviour changed. `isabelle-query`'s old `<0.2.0` cap was
-briefly a reason to stay at 0.1.x, which was circular since the cap was the
-thing to fix — it now declares `>=0.2.0`, floor only, and 0.2.2 satisfies it.
+**0.1.0, 0.1.1, 0.2.0 and 0.2.1 were never published**, so 0.2.2 is the first
+version the world sees. Those numbers were spent locally rather than wasted:
+version numbers before publication are free, and spending one is always cheaper
+than editing history to reclaim it — see **Conventions**.
 
-**0.1.0, 0.1.1, 0.2.0 and 0.2.1 were never published**, so 0.2.2 is the first version
-the world sees and there is no earlier release to fall back to. Those numbers
-were spent locally rather than wasted: version numbers before first publication
-are free, and spending one is always cheaper than editing history to reclaim it
-— see **Conventions**.
+### 0.2.3 — open, and deliberately not released yet
 
-**The one remaining step before publishing** is creating
-`https://github.com/ott2/isabelle-layout`, which the package metadata already
-points at and which currently 404s — a release published before it exists ships
-metadata whose own link is dead, and metadata cannot be corrected without a new
-version number.
+Held for whatever real use turns up, on the reasoning that the first outside
+users will find things worth fixing and a release per fix is churn. Landed so
+far:
 
-**`docs/publishing.md` is the runbook**: repository, tag, token, optional
-TestPyPI rehearsal, upload, and what cannot be undone. Follow it rather than
-the one-liner it replaced, which said nothing about credentials or ordering.
+- **The sdist no longer ships maintainer-only files.** `docs/publishing.md` is
+  this project's release process and `scripts/verify_move.py` refuses to run by
+  design; neither is any use to somebody building or testing the source. The
+  wheel was already clean — 40 KB, eight modules, the corpus and `py.typed`.
+
+**Releasing** is `docs/publishing.md`, and it is now short: drop the `.dev0`,
+commit with the release notes *as the commit message*, `git push origin main`,
+`git push origin vX.Y.Z`. The tag push triggers
+`.github/workflows/release.yml`, which publishes the GitHub Release from that
+commit's message. PyPI is still a separate manual `twine upload`.
 
 CI was **deliberately deferred** (the choice was "publish now, CI after").
 Consequence to remember: `requires-python = ">=3.9"` and the

@@ -97,3 +97,25 @@ packages = ["src/isabelle_layout"]
 # corpus against a newer Isabelle.  An sdist that omits the script named in its
 # own documentation is an sdist whose documentation is wrong.
 include = ["src/", "docs/", "scripts/", "tests/", "README.md", "LICENSE"]
+
+# The line `include` cannot draw: not "extra files" but *files about this
+# project's release process rather than about the code*.  Somebody who
+# downloads the source to build or test it has no use for either of these, and
+# the sdist should not make them read past them.
+#
+#   docs/publishing.md      how the maintainer gets a PyPI token and what
+#                           cannot be undone -- our process, nobody else's.
+#   scripts/verify_move.py  expired, and refuses to run: it differenced this
+#                           package against the pre-split `isabelle_query.common`,
+#                           which now re-exports this one, so the comparison
+#                           would be a function against itself.  Shipping a
+#                           tool that cannot work is worse than omitting it.
+#
+# Both stay in the repository -- the first is the runbook, the second is the
+# record of a verification that has to be able to fail.
+#
+# `.gitignore` is also noise in an sdist and is NOT listed here, because
+# hatchling ships it regardless: adding it to `exclude` was tried and the file
+# still appears. A config line that does nothing is worse than the file it
+# fails to remove, since the next reader believes it.
+exclude = ["docs/publishing.md", "scripts/verify_move.py"]

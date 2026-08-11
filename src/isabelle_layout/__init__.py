@@ -73,7 +73,11 @@ from .theories import (
 # is imported from a source tree that was never installed.  Deriving it from
 # `importlib.metadata` instead would raise `PackageNotFoundError` in exactly
 # that case.
-__version__ = "0.2.2"
+# `.dev0` because this tree is *not* the published 0.2.2 and must not claim to
+# be.  The release commit drops the suffix, which keeps that commit the
+# version-bump commit -- the one `.github/workflows/release.yml` publishes as
+# the notes.
+__version__ = "0.2.3.dev0"
 
 __all__ = [
     "SessionInfo",
