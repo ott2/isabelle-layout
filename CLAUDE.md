@@ -25,7 +25,7 @@ a tree that is not the published release must not claim to be it.
 
 | | |
 |---|---|
-| Version | `0.2.3.dev0`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Version | `0.2.3.dev0`, declared in `pyproject.toml`; `__version__` reads it back from dist metadata |
 | Published | **0.2.2**, PyPI and GitHub, 11 Aug 2026 |
 | Tests | 219, passing against a real install |
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
@@ -50,7 +50,8 @@ far:
   design; neither is any use to somebody building or testing the source. The
   wheel was already clean — 40 KB, eight modules, the corpus and `py.typed`.
 
-**Releasing** is `docs/publishing.md`, and it is now short: drop the `.dev0`,
+**Releasing** is `docs/publishing.md`, and it is now short: drop the `.dev0`
+from `version` in `pyproject.toml` and reinstall,
 commit with the release notes *as the commit message*, `git push origin main`,
 `git push origin vX.Y.Z`. The tag push triggers
 `.github/workflows/release.yml`, which publishes the GitHub Release from that

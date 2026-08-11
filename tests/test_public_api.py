@@ -52,6 +52,34 @@ def test_version_is_exported_and_parseable():
     assert len(parts) >= 2 and all(p.isdigit() for p in parts[:2])
 
 
+def test_version_comes_from_the_distribution_metadata():
+    """One source of truth: `pyproject.toml`, baked into dist metadata at build
+    time and read back here. The failure being avoided is a release where the
+    metadata says one thing and `__version__` says another — nothing catches
+    that, because each is individually plausible."""
+    from importlib.metadata import version
+    assert isabelle_layout.__version__ == version("isabelle-layout")
+
+
+def test_no_version_literal_can_drift_back_in():
+    """`__version__` is resolved by a module `__getattr__`, not assigned.
+
+    A literal reintroduced "just for convenience" would be the drift this
+    arrangement exists to prevent, and it would keep working right up until the
+    release someone forgot to edit it. So the absence is asserted rather than
+    trusted."""
+    import ast
+    from pathlib import Path
+
+    tree = ast.parse(Path(isabelle_layout.__file__).read_text(encoding="utf-8"))
+    assigned = {
+        t.id
+        for node in ast.walk(tree) if isinstance(node, ast.Assign)
+        for t in node.targets if isinstance(t, ast.Name)
+    }
+    assert "__version__" not in assigned
+
+
 def test_distribution_predicates_are_public_but_not_re_exported():
     """The [distribution-module] decision, as a test.
 

@@ -11,7 +11,7 @@ downloading the source needs — see `exclude` in `pyproject.toml`.
 ## The short version, now that the repository exists
 
 ```sh
-# 1. drop the `.dev0` from src/isabelle_layout/__init__.py
+# 1. drop the `.dev0` from `version` in pyproject.toml, and reinstall
 # 2. commit, with the RELEASE NOTES as the commit message
 git push origin main
 git push origin vX.Y.Z            # triggers the Release workflow

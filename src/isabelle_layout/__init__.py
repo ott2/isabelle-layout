@@ -73,11 +73,29 @@ from .theories import (
 # is imported from a source tree that was never installed.  Deriving it from
 # `importlib.metadata` instead would raise `PackageNotFoundError` in exactly
 # that case.
-# `.dev0` because this tree is *not* the published 0.2.2 and must not claim to
-# be.  The release commit drops the suffix, which keeps that commit the
-# version-bump commit -- the one `.github/workflows/release.yml` publishes as
-# the notes.
-__version__ = "0.2.3.dev0"
+def __getattr__(name: str) -> str:
+    """`__version__`, read from the installed distribution metadata.
+
+    The version is declared once, in ``pyproject.toml``.  There is deliberately
+    no literal here to drift from it — the failure being avoided is a release
+    where the metadata says one thing and ``__version__`` says another, which
+    nothing catches because both are individually plausible.
+
+    Resolved on *access* rather than at import (PEP 562).  Reading dist
+    metadata means scanning ``sys.path`` for a matching ``.dist-info``, which
+    costs about 0.3 ms in a small virtualenv and more in a populated one — a
+    price every consumer would otherwise pay on ``import isabelle_layout``
+    whether or not they ever ask.  This package's whole premise is being cheap
+    enough for tools with hard constraints to adopt, so the cost goes to the
+    caller who wants the answer.
+    """
+    if name == "__version__":
+        from importlib.metadata import PackageNotFoundError, version
+        try:
+            return version("isabelle-layout")
+        except PackageNotFoundError:  # a source tree that was never installed
+            return "0.0.0+unknown"
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "SessionInfo",

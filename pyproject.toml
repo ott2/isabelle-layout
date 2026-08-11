@@ -4,7 +4,20 @@ build-backend = "hatchling.build"
 
 [project]
 name = "isabelle-layout"
-dynamic = ["version"]
+# Declared here, statically, and read back at runtime from the installed
+# distribution metadata (`isabelle_layout.__version__`).  This is the PEP 621
+# field the file exists for, it is what both siblings do (`isabelle-query`,
+# `isabelle-watchdog`), and PEP 396 -- which proposed the `__version__`
+# literal -- was withdrawn.  A release bump is one edit, in the place a reader
+# looks first.
+#
+# It replaced `dynamic = ["version"]` reading a literal out of
+# `src/isabelle_layout/__init__.py`.  The stated reason for that was to keep
+# `__version__` right when the package is imported from a source tree that was
+# never installed -- a case this project deliberately does not support, since
+# the suite runs against a real install and never `PYTHONPATH=src`.  A
+# justification that its own test policy rules out is not a justification.
+version = "0.2.3.dev0"
 description = "What structure an Isabelle project has, according to its own files — sessions, theory headers, and project roots read from ROOT files and .thy headers, with no Isabelle process involved."
 readme = "README.md"
 # 3.9, not 3.10, because `isabelle-query` declares 3.9 and is about to depend
@@ -75,13 +88,6 @@ addopts = "-ra --strict-markers"
 markers = [
     "corpus: needs a real Isabelle/AFP checkout on disk (skipped without one)",
 ]
-
-# Single-sourced in the package, not stated here, so `isabelle_layout.__version__`
-# is correct even when the package is imported from a source tree that was never
-# installed.  Deriving it from `importlib.metadata` instead raises
-# `PackageNotFoundError` in exactly that case.
-[tool.hatch.version]
-path = "src/isabelle_layout/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/isabelle_layout"]
