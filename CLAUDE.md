@@ -310,8 +310,17 @@ private while making the dependency legible and breakage deliberate.
   pushed commit with an imperfect message stays as it is: *"no-one is grading
   our work; our users care about releases being good quality and not how they
   got there."* If something about a release needs restating, add — a new
-  commit, a new version, or an annotated tag whose message carries the release
-  notes. An `--amend` of an already-pushed release commit is what cost 0.2.0.
+  commit and a new version. An `--amend` of an already-pushed release commit
+  is what cost 0.2.0. Version numbers before publication are free; history
+  other people may have fetched is not.
+- **The release notes are the version-bump commit's message.**
+  `.github/workflows/release.yml` publishes that commit's message as the GitHub
+  Release, so it is written for *users* — what changed since the last release —
+  while how the work happened goes in the commits around it. Not the tag
+  annotation: the workflow dereferences the tag to its commit precisely because
+  reading annotations is unreliable on a runner.
+- **No `gh` locally.** Plain git over SSH pushes branches and tags; the one
+  thing git cannot do — create a Release — happens on the runner instead.
 - **Commits**: small, single-concern, frequent, with the reasoning in the
   message and a stable `[tag]` when it is a decision. Do not push unless
   asked. Trailer, verbatim:

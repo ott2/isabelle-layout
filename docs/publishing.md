@@ -26,23 +26,37 @@ git remote add origin git@github.com:ott2/isabelle-layout.git   # or https://
 git push -u origin main
 ```
 
-Then tag the commit the artefacts were built from, and push the tag
-separately — `git push` does not push tags:
+**The release notes go in the version-bump commit's message.** That is not a
+style preference: `.github/workflows/release.yml` reads
+`repos/<repo>/commits/<tag>` and publishes that commit's message as the GitHub
+Release body. So the release commit is written *for users* — what changed since
+the last release — and everything about how the work happened belongs in the
+commits around it.
 
 ```sh
-git tag -a v0.2.1 -F release-notes.md    # the tag message IS the release notes
-git push origin v0.2.1
+git commit -m "0.2.2 — first published release" -m "## Added …"
+git tag -a v0.2.2 -m "isabelle-layout 0.2.2"
+git push origin main
+git push origin v0.2.2      # `git push` alone does not push tags
 ```
 
-**Put the release notes in the tag's own message.** An annotated tag is a real
-git object with an arbitrary body, so the notes travel with the tag and live in
-one place. This is also why the release *commit* does not need to be a summary
-of user-visible changes: the tag is the thing that describes what shipped, and
-they have different audiences — the log records how the work happened.
+Pushing the tag is the whole publish: the workflow creates the Release from the
+runner, so nothing local needs `gh` or the web UI. It is idempotent, so a
+re-pushed tag repairs a bad publish rather than erroring.
 
-Tag *before* uploading, so the tag names the tree that produced the artefacts.
-If the upload then fails and something has to change, the fix is a new version,
-not a moved tag — a tag that moves after being pushed is worse than no tag.
+Do **not** put the notes in the tag annotation. `--notes-from-tag` reads the
+annotation and silently falls back to the commit message when the runner's
+local tag is lightweight, which mis-published `isabelle-query` v0.2.5's first
+run. Dereferencing the tag to its commit is deterministic, so that is what the
+workflow does — and it means the annotation is read by nothing.
+
+The workflow must exist in the **tagged commit's tree**: for `on: push: tags`,
+Actions resolves the workflow from the pushed ref, not from the default branch.
+
+Tag *before* uploading to PyPI, so the tag names the tree that produced the
+artefacts. If the upload then fails and something has to change, the fix is a
+new version, not a moved tag — a tag that moves after being pushed is worse
+than no tag.
 
 **Do not `--amend` a release commit that has been pushed, ever.** It leaves the
 branch a *sibling* of what the remote has rather than a descendant, so the next
@@ -189,16 +203,11 @@ python3 -m venv /tmp/real
 ## Part 6 — after the first upload
 
 - [ ] Create a project-scoped API token; **revoke the account-scoped one**.
-- [ ] Decide whether a GitHub **Release** is wanted at all. A pushed tag is
-      *not* one: git has no concept of a Release, which exists only in GitHub's
-      own database and is reachable only through its REST API or web UI. What
-      the pushed tag does give you is an entry under **Tags** with the
-      annotated message rendered, which is a perfectly good record — and
-      `docs/decisions.md` already treats the tag as the record. If the Releases
-      page, the atom feed and the auto-attached source archives are wanted:
-      **Releases → Draft a new release → choose the existing tag**, which
-      pre-fills the body from the tag's message. Not `gh` — this machine
-      prefers plain git, and the web UI needs no extra tooling or auth.
+- [ ] Check the Release actually published. Pushing the tag triggers
+      `.github/workflows/release.yml`, which creates it from the tagged
+      commit's message; nothing local is required. If the body looks wrong,
+      fix the commit message on a *new* commit, re-tag that, and push — the
+      workflow edits an existing Release rather than erroring.
 - [ ] Add the CI matrix. `requires-python = ">=3.9"` and the classifiers
       through 3.14 are currently verified *statically only* — every module
       parses under `ast.parse(feature_version=(3, 9))`, all carry
