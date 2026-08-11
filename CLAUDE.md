@@ -16,14 +16,14 @@ is a distribution problem, not a code problem. `README.md` argues the case at
 length; `isabelle-layout-prompt.md` is the original brief and the normative
 statement of scope.
 
-## Status: v0.2.1, complete and unpublished
+## Status: v0.2.2, complete and unpublished
 
 The package is built, tested, and ready to release. Everything in the brief's
 definition of done is met.
 
 | | |
 |---|---|
-| Version | `0.2.1`, single-sourced in `src/isabelle_layout/__init__.py` |
+| Version | `0.2.2`, single-sourced in `src/isabelle_layout/__init__.py` |
 | Tests | 219, passing against a real install |
 | Conformance corpus | 25 cases, verified against Isabelle2025-2 |
 | AFP agreement | 988 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
@@ -35,9 +35,9 @@ definition of done is met.
 **The minor moved to 0.2 because a console script is a feature**; nothing was
 removed and no behaviour changed. `isabelle-query`'s old `<0.2.0` cap was
 briefly a reason to stay at 0.1.x, which was circular since the cap was the
-thing to fix — it now declares `>=0.2.0`, floor only, and 0.2.1 satisfies it.
+thing to fix — it now declares `>=0.2.0`, floor only, and 0.2.2 satisfies it.
 
-**0.1.0, 0.1.1 and 0.2.0 were never published**, so 0.2.1 is the first version
+**0.1.0, 0.1.1, 0.2.0 and 0.2.1 were never published**, so 0.2.2 is the first version
 the world sees and there is no earlier release to fall back to. Those numbers
 were spent locally rather than wasted: version numbers before first publication
 are free, and spending one is always cheaper than editing history to reclaim it

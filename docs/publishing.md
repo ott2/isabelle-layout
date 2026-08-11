@@ -164,7 +164,7 @@ stops a future dependency being silently satisfied by a stranger's package.
 actually renders on a project page, that the upload credentials work, and that
 a real `pip install` from an index yields an importable package with its data
 files. **What it does not prove:** anything about real PyPI's state — and note
-that it consumes version `0.2.1` on TestPyPI, so a second rehearsal needs a
+that it consumes version `0.2.2` on TestPyPI, so a second rehearsal needs a
 different version.
 
 ---
@@ -226,8 +226,8 @@ python3 -m venv /tmp/real
 ## What cannot be undone
 
 - **A version number is permanent.** PyPI refuses a file for a version it has
-  already seen, even after the release is deleted. A bad `0.2.1` is fixed by
-  publishing `0.2.2`, never by re-uploading. This is the only genuinely
+  already seen, even after the release is deleted. A bad `0.2.2` is fixed by
+  publishing `0.2.3`, never by re-uploading. This is the only genuinely
   unrecoverable step, and it is why the rehearsal is worth one evening.
 - **The author email becomes public** on the project page and in the metadata
   of every downloaded artefact.
