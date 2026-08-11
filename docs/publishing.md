@@ -35,10 +35,9 @@ git push origin v0.2.1
 ```
 
 **Put the release notes in the tag's own message.** An annotated tag is a real
-git object with an arbitrary body, so `gh release create v0.2.1
---notes-from-tag` builds the GitHub Release from it and the notes live in one
-place. This is also why the release *commit* does not need to be a summary of
-user-visible changes: the tag is the thing that describes what shipped, and
+git object with an arbitrary body, so the notes travel with the tag and live in
+one place. This is also why the release *commit* does not need to be a summary
+of user-visible changes: the tag is the thing that describes what shipped, and
 they have different audiences — the log records how the work happened.
 
 Tag *before* uploading, so the tag names the tree that produced the artefacts.
@@ -190,10 +189,16 @@ python3 -m venv /tmp/real
 ## Part 6 — after the first upload
 
 - [ ] Create a project-scoped API token; **revoke the account-scoped one**.
-- [ ] Cut the GitHub Release: `gh release create v0.2.1 --notes-from-tag`.
-      A pushed tag is *not* a Release — the Release is a separate GitHub-side
-      object attached to the tag, and only it produces notes, a feed entry and
-      the Releases page.
+- [ ] Decide whether a GitHub **Release** is wanted at all. A pushed tag is
+      *not* one: git has no concept of a Release, which exists only in GitHub's
+      own database and is reachable only through its REST API or web UI. What
+      the pushed tag does give you is an entry under **Tags** with the
+      annotated message rendered, which is a perfectly good record — and
+      `docs/decisions.md` already treats the tag as the record. If the Releases
+      page, the atom feed and the auto-attached source archives are wanted:
+      **Releases → Draft a new release → choose the existing tag**, which
+      pre-fills the body from the tag's message. Not `gh` — this machine
+      prefers plain git, and the web UI needs no extra tooling or auth.
 - [ ] Add the CI matrix. `requires-python = ">=3.9"` and the classifiers
       through 3.14 are currently verified *statically only* — every module
       parses under `ast.parse(feature_version=(3, 9))`, all carry
