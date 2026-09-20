@@ -67,12 +67,6 @@ from .theories import (
     session_theories,
 )
 
-# The single source of the version; pyproject.toml reads it from here
-# (`[tool.hatch.version]`).  Kept in the package rather than stated statically
-# in pyproject so that `isabelle_layout.__version__` is correct when the package
-# is imported from a source tree that was never installed.  Deriving it from
-# `importlib.metadata` instead would raise `PackageNotFoundError` in exactly
-# that case.
 def __getattr__(name: str) -> str:
     """`__version__`, read from the installed distribution metadata.
 
