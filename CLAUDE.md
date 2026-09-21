@@ -2,6 +2,12 @@
 
 Guidance for Claude Code (claude.ai/code) working in this repository.
 
+This file is what a session starts from: what the package is, how it is shaped,
+and the rules that hold. It is deliberately **not** a log. Release history,
+measurements and the reasoning behind past changes live in the git log, indexed
+by `docs/decisions.md`; a number quoted here would be stale by the time anyone
+relied on it.
+
 ## What this repository is
 
 `isabelle-layout` answers one question: **what structure does this Isabelle
@@ -15,56 +21,6 @@ every consumer who wanted a ROOT parser had to install a CLI to get one. That
 is a distribution problem, not a code problem. `README.md` argues the case at
 length; `isabelle-layout-prompt.md` is the original brief and the normative
 statement of scope.
-
-## Status: 0.2.2 published; `main` is 0.2.3.dev0
-
-**`isabelle-layout` 0.2.2 is on PyPI** and installs clean: `pip install
-isabelle-layout` in an empty venv gives the console script on `PATH` and a
-passing `--self-check`. `main` has moved on and says so — `0.2.3.dev0`, because
-a tree that is not the published release must not claim to be it.
-
-| | |
-|---|---|
-| Version | `0.2.3.dev0`, declared in `pyproject.toml`; `__version__` reads it back from dist metadata |
-| Published | **0.2.2**, PyPI and GitHub, 11 Aug 2026 |
-| Tests | 219, passing against a real install |
-| Conformance corpus | 25 cases, verified against Isabelle2025-2 |
-| AFP agreement | 988 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
-| Distribution agreement | 132 sessions vs `isabelle build -n -l` — 0 over-claims, 0 misses |
-| CLI | `isabelle-layout`, a console script; touches every public name |
-| Packaging | `twine check --strict` passes; wheel installs and runs in a clean venv outside the repo |
-
-**0.1.0, 0.1.1, 0.2.0 and 0.2.1 were never published**, so 0.2.2 is the first
-version the world sees. Those numbers were spent locally rather than wasted:
-version numbers before publication are free, and spending one is always cheaper
-than editing history to reclaim it — see **Conventions**.
-
-### 0.2.3 — open, and deliberately not released yet
-
-Held for whatever real use turns up, on the reasoning that the first outside
-users will find things worth fixing and a release per fix is churn. Landed so
-far:
-
-- **The sdist no longer ships maintainer-only files.** `docs/publishing.md` is
-  this project's release process and `scripts/verify_move.py` refuses to run by
-  design; neither is any use to somebody building or testing the source. The
-  wheel was already clean — 40 KB, eight modules, the corpus and `py.typed`.
-
-**Releasing** is `docs/publishing.md`, and it is now short: drop the `.dev0`
-from `version` in `pyproject.toml` and reinstall,
-commit with the release notes *as the commit message*, `git push origin main`,
-`git push origin vX.Y.Z`. The tag push triggers
-`.github/workflows/release.yml`, which publishes the GitHub Release from that
-commit's message. PyPI is still a separate manual `twine upload`.
-
-CI was **deliberately deferred** (the choice was "publish now, CI after").
-Consequence to remember: `requires-python = ">=3.9"` and the
-classifiers through 3.14 are verified *statically only* — every module parses
-under `ast.parse(feature_version=(3, 9))`, all carry
-`from __future__ import annotations`, and there is no runtime PEP 604, no
-match statement, and no post-3.9 stdlib call. Only 3.14 is installed on this
-machine. A CI matrix is what would close that, and it is the first thing to
-add after release.
 
 ## Architecture: the dependency direction is the design
 
@@ -169,8 +125,8 @@ behaviour.** Hand-compute the expected value, or ask the prover, and then make
 the code match. There are two oracles, and they answer different questions:
 
 - **`isabelle sessions -d DIR -a`** — what a ROOT *declares*, and whether it is
-  even legal. Using it is how we learnt that two of the eight seed conformance
-  cases are inputs Isabelle *rejects*.
+  even legal. Using it is how we learnt that some of the seed conformance cases
+  are inputs Isabelle *rejects*.
 - **`isabelle build -n -l`** — what a session *loads*, file by file. This is
   the authority for `session_theories`, and it settles questions that reading
   `Pure/Build/sessions.scala` only half-answers. It established that a
@@ -180,18 +136,21 @@ the code match. There are two oracles, and they answer different questions:
   (`Duplicate use of directory`) rather than something a reader must guard
   against.
 
-Both corpora agree with the second oracle exactly — 0 over-claims and 0 misses
-inside a session's own directories, over 988 AFP and 132 distribution sessions.
+Two corpora are on this machine. Enumerate them with `iter_sessions`, never a
+bare `rglob`:
 
-- `~/repos/afp/thys` — the AFP (Isabelle2025-2), 988 sessions, 9,910 theories
-- `~/repos/isabelle/src` — the distribution, 135 sessions, 1,824 theories
+- `~/repos/afp/thys` — the AFP, Isabelle2025-2
+- `~/repos/isabelle/src` — the Isabelle distribution
 
-Enumerate with `iter_sessions`, never a bare `rglob`.
+**Do not quote an agreement figure from documentation — run the probe.**
+`scripts/probe_against_isabelle.py` is what establishes whether this package
+still agrees with `isabelle build -n -l` over those corpora, and it is the only
+answer that cannot be out of date.
 
-**Measure before changing a classification.** Both closure fixes were sized
-over both corpora first — including the containment check that showed 0
-`directories` entries escape the ROOT's own directory, which is what made
-widening the index safe.
+**Measure before changing a classification.** Size the change over both corpora
+first. A rule that looks obviously right against one ROOT can move theories by
+the hundred across the AFP, in either direction, and the difference between a
+fix and a regression is not visible from a single example.
 
 ## The CLI — `[demo-cli]`, decided
 
@@ -231,11 +190,11 @@ AODV
 | `--self-check` | `conformance` |
 | `-l`, `--no-closure` | none — they *withhold* the 70× cost |
 
-**The finding the exercise produced**, which was its point: `iter_thy_files` is
-the weakest-justified name on the surface. `iter_sessions` + `session_theories`
-subsume it except for the one thing `--files` uses — declared theories, ROOT
-order, deduplicated, no closure. Real, but narrow. If 0.2 ever revisits the
-surface, that is the name to revisit.
+**The weakest-justified name on the surface is `iter_thy_files`.**
+`iter_sessions` + `session_theories` subsume it except for the one thing
+`--files` uses — declared theories, ROOT order, deduplicated, no closure. Real,
+but narrow. If the public surface is ever revisited, that is the name to
+revisit first.
 
 Two behaviours worth keeping:
 
@@ -264,59 +223,80 @@ have their own maintainers. If work here turns up a bug there, write it up as
 a bug report for that project rather than patching it — the one exception
 already taken was the original split, which had to touch `query` by design.
 
-`isabelle-query` declares `isabelle-layout>=0.2.0` — floor, no ceiling, since
-its `59345b2` — and re-exports this package from `isabelle_query.common`, so
-its consumers did not move on the day of the split. Its suite (877 tests)
-passes against this build; re-run it after any change to the public API:
+`isabelle-query` declares `isabelle-layout>=0.2.0` — floor, no ceiling — and
+re-exports this package from `isabelle_query.common`, so its consumers did not
+move on the day of the split. Re-run its suite after any change to the public
+API:
 
 ```sh
 cd ~/projects/query && .venv/bin/pip install -q ~/projects/isabelle-layout \
   && .venv/bin/python -m pytest -q
 ```
 
-Note the AFP load set moved 9,907 → 9,910 with `[session-dirs]`, so downstream
-census numbers shift by three theories. That is a fix, not a regression, and
-it is owed to them as feedback.
+A change here that moves a load set moves their census numbers too. That is
+owed to them as feedback, whether it is a fix or a regression.
 
 ### The open question — `[layout-privates]`
 
-Dropping its cap made `isabelle-query` look at what it actually imports, and
-the answer is a finding about **this** package: of the 24 names
-`isabelle_query/common.py` takes, **eight are underscore-private** —
+`isabelle_query/common.py` imports underscore-private names from this package:
 `_tokenize_root`, `_resolve_thy_file`, `_parse_root_theories`,
 `_parse_root_directories`, `_read_marker`, `_INFRA_ROOTS`, `_THY_HEADER_RE`,
-`_NONHOL_DISTRIBUTION_BASES` — plus `_classify_import`, `LEGACY_MARKER_NAME`,
-and the whole of `_lexer`. Its `tests/test_layout_surface.py` now pins them
-from the outside, resolving each through `importlib` so a removal names the
-casualty instead of failing as one `ImportError` from whichever test imported
-first.
+`_NONHOL_DISTRIBUTION_BASES`, `_classify_import`, `LEGACY_MARKER_NAME`, and the
+whole of `_lexer`. Its `tests/test_layout_surface.py` pins them from the
+outside, resolving each through `importlib` so a removal names the casualty
+instead of failing as one `ImportError` from whichever test imported first.
 
 **This package's rule is that the public API is named by evidence — what
-consumers actually import.** By that rule the surface is currently wrong, and
-no version range fixes it: a *patch* release may move any of those names.
+consumers actually import.** By that rule the surface is wrong, and no version
+range fixes it: a *patch* release may move any of those names.
 
-Not a release blocker — nothing here moved them, so the exposure is exactly
-what it was before — but settle it before the next change to any of them. Both
-obvious answers fight recorded decisions: promoting `_classify_import` reverses
-the documented reason it is private (an analysis judgement, not a reading of a
-file), and promoting `_INFRA_ROOTS` publishes the name list `distribution.py`
-exists to keep separable. A third option is an explicitly-unstable
-`isabelle_layout._compat` naming exactly these, which keeps the judgement
-private while making the dependency legible and breakage deliberate.
+Settle it before the next change to any of them. Both obvious answers fight
+recorded decisions: promoting `_classify_import` reverses the documented reason
+it is private (an analysis judgement, not a reading of a file), and promoting
+`_INFRA_ROOTS` publishes the name list `distribution.py` exists to keep
+separable. A third option is an explicitly-unstable `isabelle_layout._compat`
+naming exactly these, which keeps the judgement private while making the
+dependency legible and breakage deliberate.
+
+## Releasing
+
+`docs/publishing.md` is the runbook. In outline: drop the `.dev0` from
+`version` in `pyproject.toml` and reinstall, commit with the release notes *as
+the commit message*, `git push origin main`, `git push origin vX.Y.Z`. The tag
+push triggers `.github/workflows/release.yml`, which publishes the GitHub
+Release from that commit's message. PyPI is a separate manual `twine upload`.
+
+The version is declared once, statically, in `pyproject.toml`;
+`isabelle_layout.__version__` reads it back from the installed distribution
+metadata, resolved on access by a module `__getattr__`. Between releases `main`
+carries a `.dev0` suffix, because a tree that is not the published release must
+not claim to be it.
+
+**Release when there is something worth releasing, not once per fix.** Fixes
+accumulate on `main`; outside users will find things worth fixing, and a
+release each would be churn.
+
+**There is no CI matrix.** So `requires-python = ">=3.9"` and the classifiers
+through 3.14 are verified *statically only* — every module must parse under
+`ast.parse(feature_version=(3, 9))`, all carry `from __future__ import
+annotations`, and there must be no runtime PEP 604, no match statement, and no
+post-3.9 stdlib call. Only 3.14 is installed on this machine. Adding the matrix
+is the first thing worth doing.
 
 ## Conventions
 
 - **Module docstrings carry the reasoning**, at length, at the top of the
   file — why the module exists and what went wrong without it. Match the
   register of `isabelle_watchdog/roots.py`, which argues its own existence.
+  `pyproject.toml` is the exception and carries none: it is read by people
+  debugging a build, who arrive without the context an argument would need.
 - **Never rewrite history.** No `git commit --amend`, no `git reset`, no
   force-push, and no merge whose purpose is to repair an earlier rewrite. A
   pushed commit with an imperfect message stays as it is: *"no-one is grading
   our work; our users care about releases being good quality and not how they
   got there."* If something about a release needs restating, add — a new
-  commit and a new version. An `--amend` of an already-pushed release commit
-  is what cost 0.2.0. Version numbers before publication are free; history
-  other people may have fetched is not.
+  commit and a new version. Version numbers before publication are free;
+  history other people may have fetched is not.
 - **The release notes are the version-bump commit's message.**
   `.github/workflows/release.yml` publishes that commit's message as the GitHub
   Release, so it is written for *users* — what changed since the last release —
@@ -344,6 +324,13 @@ private while making the dependency legible and breakage deliberate.
 - **Do not implement ROOT syntax Isabelle does not have.** A per-theory `in`
   clause was already deleted once for this reason; `SessionInfo.theories`'
   `dir_override` is always `None` and a test says so.
+- **Do not ship this project's release process in the sdist.**
+  `docs/publishing.md` and `scripts/verify_move.py` are excluded because they
+  are about releasing this package rather than about the code, and somebody
+  building from source has no use for either. Both stay in the repository.
+- **Do not add `.gitignore` to the sdist `exclude` list.** It was tried;
+  hatchling ships the file regardless. A config line that does nothing is worse
+  than the file it fails to remove, because the next reader believes it.
 - **Do not trust a verification that cannot fail.** `verify_move.py` would
   have printed its original number while comparing functions with themselves.
   If a check passes suspiciously easily, confirm it can still fail.
