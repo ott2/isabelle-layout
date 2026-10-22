@@ -64,16 +64,13 @@ tar tzf dist/isabelle_layout-X.Y.Z.tar.gz
 git tag -a vX.Y.Z -m "isabelle-layout X.Y.Z"
 git push origin main
 git push origin vX.Y.Z
-gh run list -R ott2/isabelle-layout -L 3
-gh release view vX.Y.Z -R ott2/isabelle-layout
+curl -s https://api.github.com/repos/ott2/isabelle-layout/releases/tags/vX.Y.Z
 ```
 
 Tag before uploading, so the tag names the tree that produced the artefacts.
 `git push` does not push tags on its own, and the tag push is the whole GitHub
-publish: the workflow creates the Release on the runner, and the two `gh`
-commands only read the result. Creating it locally with `gh release create`
-would put the notes somewhere other than the commit message, which is where
-this project keeps them. Actions resolves the workflow from the pushed ref, so
+publish — the workflow creates the Release on the runner, which is the reason
+no step here needs `gh`. Actions resolves the workflow from the pushed ref, so
 it must already be in the tagged commit's tree (it is). Re-pushing a tag edits
 the existing Release, so wrong notes are fixed by a *new* commit, tagged and
 pushed; never by `--amend`, which leaves the branch a sibling of the remote,
