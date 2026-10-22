@@ -1,10 +1,10 @@
 # Publishing a release
 
 The steps, in order; where one prevents a specific failure, it names it.
-Commands are shell-agnostic — `env VAR=…`, not the sh-only `VAR=… cmd` prefix —
-and use the repository's `.venv` (`pip install build twine`, once). The pushes
-and the upload are outward-facing, so they are taken only when asked for. Not
-shipped in the sdist; see `exclude` in `pyproject.toml`.
+Commands work as written under sh, bash, zsh and tcsh, and use the repository's
+`.venv` (`pip install build twine`, once). The pushes and the upload are
+outward-facing, so they are taken only when asked for. Not shipped in the
+sdist; see `exclude` in `pyproject.toml`.
 
 ## 1. Pre-flight
 
@@ -78,27 +78,39 @@ so wrong notes are fixed by a *new* commit, tagged and pushed; never by
 ## 5. Upload to PyPI
 
 ```sh
-.venv/bin/twine upload -r pypi dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+.venv/bin/twine upload -r isabelle-layout dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
-`-r pypi` is spelled out though it is the default, so that `TWINE_REPOSITORY`
-cannot redirect the upload silently. A half-completed one is re-run with
-`--skip-existing`.
+**Every project gets its own `~/.pypirc` section, named after the project**, so
+`-r` selects both the index and the token scoped to it. Nothing is passed on
+the command line or through the environment, where `ps` would show the token
+and the shell would remember it.
 
-The username is the literal `__token__` and the token is scoped to
-`isabelle-layout`. Keep both in `~/.pypirc` at mode 600, which avoids quoting a
-long token; if that file sets `index-servers`, list `pypi` **and** `testpypi`,
-because twine supplies default URLs for both only while the key is absent.
-Otherwise twine prompts, which is fine, or:
+```ini
+[distutils]
+index-servers =
+    pypi
+    testpypi
+    isabelle-layout
 
-```sh
-env TWINE_USERNAME=__token__ TWINE_PASSWORD=… \
-    .venv/bin/twine upload -r pypi dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+[isabelle-layout]
+repository = https://upload.pypi.org/legacy/
+username = __token__
+password = pypi-AgEIcHlwaS5vcmc…
 ```
 
-**Trusted Publishing** would retire the token, uploading from Actions over
-OIDC; a *pending publisher* registered before a first upload also avoids the
-account-scoped token one otherwise needs.
+`chmod 600 ~/.pypirc`. Three things that file gets wrong quietly:
+
+- **The section must be listed in `index-servers`.** Twine reads per-section
+  keys only for the servers named there, so an unlisted section fails with
+  `Missing 'isabelle-layout' section` while sitting in plain sight in the file.
+- **Any section not called `pypi` or `testpypi` needs `repository =`.** Those
+  two names are the only ones twine supplies an upload URL for.
+- **Keep `testpypi` on the list.** Its default URL is injected only while it is
+  named there, so naming only the others silently takes it away.
+
+Re-run a half-completed upload with `--skip-existing`. **Trusted Publishing**
+would retire the token altogether, uploading from Actions over OIDC.
 
 ## 6. Verify as a stranger would
 
