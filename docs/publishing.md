@@ -4,7 +4,8 @@ The steps, in order. Where a step exists to prevent a specific failure, it
 names the failure. The two pushes and the upload are outward-facing, so they
 are taken only when asked for.
 
-Commands assume tcsh and the repository's `.venv`
+Commands are shell-agnostic: no `VAR=value command` prefixes, which are
+sh/bash/zsh syntax and fail under csh/tcsh. They use the repository's `.venv`
 (`.venv/bin/pip install build twine`, once).
 
 *Not shipped in the sdist:* this is our release process, not something anyone
@@ -50,15 +51,28 @@ downloading the source needs — see `exclude` in `pyproject.toml`.
 
 ## 3. Build, before tagging
 
+**`dist/` accumulates; nothing in it is deleted.** When a question comes up
+about a past release, the artefact as published is what answers it — a rebuild
+from the tag is not guaranteed byte-identical, and fetching one back depends on
+the file still being on PyPI. `dist/` is untracked, so this is local retention
+only.
+
+Because the directory keeps history, every command below names its version
+rather than globbing the directory.
+
 ```sh
-rm -rf dist
 .venv/bin/python -m build
-.venv/bin/twine check --strict dist/*
-tar tzf dist/*.tar.gz
+.venv/bin/twine check --strict dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+tar tzf dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
-- `rm -rf dist` because `twine upload dist/*` uploads whatever it finds, a
-  stale artefact from an earlier version included.
+- **Name the version; never `dist/*`.** With history kept, a bare glob hands
+  twine every artefact in the directory. `dist/isabelle_layout-X.Y.Z*` is no
+  better: it also matches `isabelle_layout-X.Y.Z.dev0-…`, and uploading a dev
+  artefact spends the release version permanently. What excludes it is the
+  hyphen before the wheel's platform tags and the exact `.tar.gz`.
+- `build` adds to `dist/` rather than replacing it, so the only artefacts it
+  overwrites are same-version ones from an earlier attempt.
 - `build` makes the wheel *from the sdist*, so a file missing from
   `[tool.hatch.build.targets.sdist] include` fails here rather than in a user's
   checkout.
@@ -100,7 +114,7 @@ artefacts.
 ## 5. Upload to PyPI
 
 ```sh
-.venv/bin/twine upload dist/*
+.venv/bin/twine upload dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
 The username is the literal string `__token__`, not an account name, and the
@@ -121,11 +135,17 @@ password = pypi-AgEIcHlwaS5vcmc…
 List **both** index servers if you write that file. Twine defaults
 `index-servers` to `pypi testpypi` and fills in both URLs, but only while the
 key is absent; naming just `pypi` silently removes TestPyPI's. Twine will
-otherwise prompt, which is fine. Under tcsh the `VAR=value command` prefix form
-does not work — use `env TWINE_USERNAME=__token__ TWINE_PASSWORD=…
-.venv/bin/twine upload dist/*`.
+otherwise prompt, which is fine. To pass the token in the environment instead,
+use `env` rather than a `VAR=value` prefix, so that the line works under any
+shell:
 
-A half-completed upload is re-run with `--skip-existing`.
+```sh
+env TWINE_USERNAME=__token__ TWINE_PASSWORD=… \
+    .venv/bin/twine upload dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+```
+
+A half-completed upload is re-run with the same arguments plus
+`--skip-existing`.
 
 **Trusted Publishing** would remove the token from this laptop: the upload
 comes from Actions over OIDC instead. Registering a *pending publisher* before
@@ -138,10 +158,14 @@ does not yet exist.
 ```sh
 python3 -m venv /tmp/real
 /tmp/real/bin/pip install isabelle-layout==X.Y.Z
-/tmp/real/bin/python -c "import isabelle_layout, isabelle_layout.conformance as c; \
-    print(isabelle_layout.__version__, len(c.cases()))"
+/tmp/real/bin/python -c "import isabelle_layout, isabelle_layout.conformance as c; print(isabelle_layout.__version__, len(c.cases()))"
 /tmp/real/bin/isabelle-layout --self-check
 ```
+
+That `python -c` stays on one line even though it is long. A `\` continuation
+*inside* double quotes is removed by sh, bash and zsh but survives as a real
+newline under csh and tcsh, where Python then rejects the indented second line.
+Continuations outside quotes, as in the `env` line above, are portable.
 
 Then look at the project page and the Release. `twine check` says nothing about
 how the README actually renders.
@@ -157,7 +181,7 @@ TestPyPI is a **separate installation** — separate database, account, token an
 2FA. Registering on one gives nothing on the other.
 
 ```sh
-.venv/bin/twine upload -r testpypi dist/*
+.venv/bin/twine upload -r testpypi dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
 python3 -m venv /tmp/tp
 /tmp/tp/bin/pip install --index-url https://test.pypi.org/simple/ --no-deps isabelle-layout
 ```
