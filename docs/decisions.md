@@ -44,6 +44,12 @@ both siblings put it.
 |-----|----------|--------|
 | `[demo-cli]` | Does the demonstration ship, and as what? | A **console script**, `isabelle-layout`. Not `python -m` (the second reader — an LLM orienting itself in a repository — discovers a name on `PATH`, not an import path), and not an unshipped example (which cannot verify an install). What bounds it is a rule rather than restraint: every flag reaches a public function, so the command cannot grow without the library growing first. |
 
+## The decision after it
+
+| Tag | Question | Answer |
+|-----|----------|--------|
+| `[layout-privates]` | A consumer imported eight private names. Promote them? | No, and nothing changed here. `isabelle-query` retired the shim that reached for them and now imports public names only, enforced on its side; so the privates stay private and may move in a patch release. |
+
 ## Corrections after the first release was prepared
 
 | Tag | Fault | Found by |
