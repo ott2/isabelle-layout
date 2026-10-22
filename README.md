@@ -198,4 +198,4 @@ import only its public names.
 
 ## Licence
 
-MIT. By András Salamon, with Claude Opus.
+MIT. By András Salamon, with Claude Opus 4.6, 4.7, 4.8, and 5.

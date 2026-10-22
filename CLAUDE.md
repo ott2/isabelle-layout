@@ -296,8 +296,13 @@ is the first thing worth doing.
   message and a stable `[tag]` when it is a decision. Do not push unless
   asked. Trailer, verbatim:
   `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`
-- **Credit**: "By András Salamon, with Claude Opus." Not a list of model
-  versions — that is a changelog, and the git log already has one.
+- **Credit**: "By András Salamon, with Claude Opus 4.6, 4.7, 4.8, and 5."
+  **The enumeration is deliberate — extend it, do not collapse it.** It looks
+  like the kind of version log this repository keeps out of its documents, and
+  is not one: attribution for AI-assisted work is converging on recording which
+  models contributed, and a credit list is no more prunable than a list of
+  co-authors who have stopped contributing. A new model that does substantial
+  work is appended.
 
 ## What not to do
 
