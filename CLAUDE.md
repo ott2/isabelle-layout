@@ -116,7 +116,7 @@ repository, which is the one question that most needs asking — and two
 | `scripts/probe_against_isabelle.py` | **The strongest check there is**: `session_theories` against `isabelle build -n -l`, the real build's own dependency resolution. Expect `AGREES`. Needs Isabelle; ~5 min for the AFP. |
 | `scripts/probe_discovery_closure.py` | The load-set invariant over a real corpus. Needs no prover, and so can run anywhere — but a set uniformly too small satisfies it. Expect `CLOSED`. |
 | `scripts/build_conformance.py` | Regenerates the corpus, putting every case to `isabelle sessions -d`. Needs Isabelle on PATH. |
-| `scripts/verify_move.py` | **Expired.** It differenced this package against the pre-split `isabelle_query.common`; that module now re-exports this one, so the comparison would be a function against itself. It detects this and refuses. |
+| `scripts/verify_move.py` | **Expired, and now inert.** It differenced this package against the pre-split `isabelle_query.common`, a module `isabelle-query` has since deleted, so the import fails before its own refusal path is reached. Reproducing its number means checking `common.py` out at query's last pre-split commit. |
 
 ## Corpora and verification habits
 
@@ -223,10 +223,11 @@ have their own maintainers. If work here turns up a bug there, write it up as
 a bug report for that project rather than patching it — the one exception
 already taken was the original split, which had to touch `query` by design.
 
-`isabelle-query` declares `isabelle-layout>=0.2.0` — floor, no ceiling — and
-re-exports this package from `isabelle_query.common`, so its consumers did not
-move on the day of the split. Re-run its suite after any change to the public
-API:
+`isabelle-query` and `isabelle-watchdog` both declare a floor and no ceiling,
+and **both import only public names** — query's
+`tests/test_layout_surface.py` enforces that by AST on their side. So a private
+name here may be moved or deleted in a patch release without breaking a known
+consumer. Re-run query's suite after any change to the public API:
 
 ```sh
 cd ~/projects/query && .venv/bin/pip install -q ~/projects/isabelle-layout \
@@ -235,28 +236,6 @@ cd ~/projects/query && .venv/bin/pip install -q ~/projects/isabelle-layout \
 
 A change here that moves a load set moves their census numbers too. That is
 owed to them as feedback, whether it is a fix or a regression.
-
-### The open question — `[layout-privates]`
-
-`isabelle_query/common.py` imports underscore-private names from this package:
-`_tokenize_root`, `_resolve_thy_file`, `_parse_root_theories`,
-`_parse_root_directories`, `_read_marker`, `_INFRA_ROOTS`, `_THY_HEADER_RE`,
-`_NONHOL_DISTRIBUTION_BASES`, `_classify_import`, `LEGACY_MARKER_NAME`, and the
-whole of `_lexer`. Its `tests/test_layout_surface.py` pins them from the
-outside, resolving each through `importlib` so a removal names the casualty
-instead of failing as one `ImportError` from whichever test imported first.
-
-**This package's rule is that the public API is named by evidence — what
-consumers actually import.** By that rule the surface is wrong, and no version
-range fixes it: a *patch* release may move any of those names.
-
-Settle it before the next change to any of them. Both obvious answers fight
-recorded decisions: promoting `_classify_import` reverses the documented reason
-it is private (an analysis judgement, not a reading of a file), and promoting
-`_INFRA_ROOTS` publishes the name list `distribution.py` exists to keep
-separable. A third option is an explicitly-unstable `isabelle_layout._compat`
-naming exactly these, which keeps the judgement private while making the
-dependency legible and breakage deliberate.
 
 ## Releasing
 
@@ -317,7 +296,8 @@ is the first thing worth doing.
   message and a stable `[tag]` when it is a decision. Do not push unless
   asked. Trailer, verbatim:
   `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`
-- **Credit**: "By András Salamon, with Claude Opus 4.6, 4.7, 4.8, and 5."
+- **Credit**: "By András Salamon, with Claude Opus." Not a list of model
+  versions — that is a changelog, and the git log already has one.
 
 ## What not to do
 

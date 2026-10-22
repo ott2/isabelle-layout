@@ -103,13 +103,15 @@ Isabelle distribution      18 ROOTs   135 sessions   1851 theories
 68362 comparisons, 0 disagreements
 ```
 
-`scripts/verify_move.py` produced it, and **can no longer reproduce it**:
-`isabelle_query.common` now re-exports this package, so the two
-"implementations" are the same function objects and the comparison would pass
-vacuously — 68,362 checks of a function against itself, printing the same
-number as the real run. The script detects that and refuses rather than
-reporting a result it did not earn. Reproducing it means checking `common.py`
-out at `isabelle-query`'s last pre-split commit.
+`scripts/verify_move.py` produced it, and **can no longer reproduce it.** It
+first became unable to: `isabelle_query.common` was turned into a re-export of
+this package, so the two "implementations" were the same function objects and
+the comparison would have passed vacuously — 68,362 checks of a function
+against itself, printing the same number as the real run. The script detects
+that and refuses rather than reporting a result it did not earn. `isabelle-query`
+has since deleted `common.py` altogether, so today the import fails and the
+refusal path is not even reached. Reproducing the number means checking
+`common.py` out at query's last pre-split commit.
 
 That expiry is the argument for the conformance corpus being a shipped
 artefact rather than a script: the corpus keeps working when the thing it was
