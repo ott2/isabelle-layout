@@ -303,8 +303,13 @@ is the first thing worth doing.
   while how the work happened goes in the commits around it. Not the tag
   annotation: the workflow dereferences the tag to its commit precisely because
   reading annotations is unreliable on a runner.
-- **No `gh` locally.** Plain git over SSH pushes branches and tags; the one
-  thing git cannot do — create a Release — happens on the runner instead.
+- **`gh` is allowed, read-only and `ott2/*` only.** Reading is fine — releases,
+  runs, PRs, `gh api` GETs. Nothing destructive: no deleting or editing
+  releases, tags, branches, runs or repositories, and no `gh api -X
+  DELETE/PATCH/PUT`. Nothing outside the `ott2` org. Branches and tags still go
+  up with plain git over SSH, and the Release is still created by CI from the
+  tagged commit's message — `gh` reads that result, it does not take over
+  making it.
 - **Commits**: small, single-concern, frequent, with the reasoning in the
   message and a stable `[tag]` when it is a decision. Do not push unless
   asked. Trailer, verbatim:
