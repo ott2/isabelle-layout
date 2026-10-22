@@ -1,64 +1,46 @@
 # Publishing a release
 
-The steps, in order. Where a step exists to prevent a specific failure, it
-names the failure. The two pushes and the upload are outward-facing, so they
-are taken only when asked for.
-
-Commands are shell-agnostic: no `VAR=value command` prefixes, which are
-sh/bash/zsh syntax and fail under csh/tcsh. They use the repository's `.venv`
-(`.venv/bin/pip install build twine`, once).
-
-*Not shipped in the sdist:* this is our release process, not something anyone
-downloading the source needs — see `exclude` in `pyproject.toml`.
+The steps, in order; where one prevents a specific failure, it names it.
+Commands are shell-agnostic — `env VAR=…`, not the sh-only `VAR=… cmd` prefix —
+and use the repository's `.venv` (`pip install build twine`, once). The pushes
+and the upload are outward-facing, so they are taken only when asked for. Not
+shipped in the sdist; see `exclude` in `pyproject.toml`.
 
 ## 1. Pre-flight
 
-- **The tests pass against a real install**:
-  `.venv/bin/pip install '.[test]' && .venv/bin/python -m pytest`. Not `-e`:
-  whether the package data ships is the one question an editable install
-  cannot answer.
-- **The 3.9 floor holds.** There is no CI matrix and only 3.14 is installed
-  here, so it is checked statically:
+```sh
+.venv/bin/pip install '.[test]' && .venv/bin/python -m pytest
+.venv/bin/python -c "import ast,pathlib; [ast.parse(p.read_text(), str(p), feature_version=(3,9)) for p in pathlib.Path('src').rglob('*.py')]"
+curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/isabelle-layout/X.Y.Z/json
+```
 
-  ```sh
-  .venv/bin/python -c "import ast,pathlib; [ast.parse(p.read_text(), str(p), feature_version=(3,9)) for p in pathlib.Path('src').rglob('*.py')]"
-  ```
-
-  That catches post-3.9 *grammar* — a `match` statement fails it — and nothing
-  else. A PEP 604 annotation like `int|str` parses clean under it and breaks
-  only when evaluated, so the other half is read by eye: every annotated module
-  carries `from __future__ import annotations`, and no post-3.9 stdlib call has
-  crept in.
-- **No consumer caps this package.** `isabelle-query` declares
-  `isabelle-layout>=0.2.0` — floor, no ceiling. A `<` bound upstream is the one
-  thing that can make a correct publish unusable.
-- **The version is unused on PyPI.** Should print 404:
-
-  ```sh
-  curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/isabelle-layout/X.Y.Z/json
-  ```
+- Install, not `-e`: whether the package data ships is the one question an
+  editable install cannot answer.
+- The `ast.parse` line stands in for the CI matrix there isn't, only 3.14 being
+  installed. It catches post-3.9 *grammar* alone — `match` fails it, `int|str`
+  does not, being a BinOp until evaluated — so also check by eye for
+  `from __future__ import annotations` and post-3.9 stdlib calls.
+- The `curl` must print 404, or the version is spent.
+- **No consumer caps this package**: `isabelle-query` declares
+  `isabelle-layout>=0.2.0`, floor only. A `<` bound upstream is the one thing
+  that can make a correct publish unusable.
 
 ## 2. The release commit
 
-1. Drop the `.dev0` from `version` in `pyproject.toml`, and reinstall.
-2. Commit with the **release notes as the commit message**: subject
-   `X.Y.Z — summary`, then markdown written for users about what changed.
-   `.github/workflows/release.yml` publishes that message as the GitHub Release
-   and reads nothing else — a tag annotation in particular is ignored. The
-   alternative, `--notes-from-tag`, reads the annotation and falls back silently
-   to the commit message when the runner's tag is lightweight, which
-   mis-published `isabelle-query` v0.2.5.
+Drop the `.dev0` from `version` in `pyproject.toml`, reinstall, and commit with
+the **release notes as the message** — subject `X.Y.Z — summary`, then markdown
+for users. `release.yml` publishes that message and reads nothing else; a tag
+annotation is ignored, `--notes-from-tag` having mis-published `isabelle-query`
+v0.2.5 by falling back to the commit message silently.
 
 ## 3. Build, before tagging
 
-**`dist/` accumulates; nothing in it is deleted.** When a question comes up
-about a past release, the artefact as published is what answers it — a rebuild
-from the tag is not guaranteed byte-identical, and fetching one back depends on
-the file still being on PyPI. `dist/` is untracked, so this is local retention
-only.
+A broken build costs nothing; a pushed tag should never move.
 
-Because the directory keeps history, every command below names its version
-rather than globbing the directory.
+**`dist/` accumulates and nothing in it is deleted**, since the artefact as
+published is what answers a later question about a release and a rebuild from
+the tag is not guaranteed byte-identical. `build` adds to the directory rather
+than replacing it, and `dist/` is untracked, so retention is local.
 
 ```sh
 .venv/bin/python -m build
@@ -66,22 +48,15 @@ rather than globbing the directory.
 tar tzf dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
-- **Name the version; never `dist/*`.** With history kept, a bare glob hands
-  twine every artefact in the directory. `dist/isabelle_layout-X.Y.Z*` is no
-  better: it also matches `isabelle_layout-X.Y.Z.dev0-…`, and uploading a dev
-  artefact spends the release version permanently. What excludes it is the
-  hyphen before the wheel's platform tags and the exact `.tar.gz`.
-- `build` adds to `dist/` rather than replacing it, so the only artefacts it
-  overwrites are same-version ones from an earlier attempt.
-- `build` makes the wheel *from the sdist*, so a file missing from
-  `[tool.hatch.build.targets.sdist] include` fails here rather than in a user's
-  checkout.
+- **Name the version; never `dist/*`,** which with history kept hands twine
+  everything there. `dist/isabelle_layout-X.Y.Z*` is no safer — it matches
+  `…-X.Y.Z.dev0-…` too, and uploading a dev artefact spends the release version
+  permanently. The hyphen before the platform tags is what excludes it.
+- `build` makes the wheel *from the sdist*, so a file missing from the sdist's
+  `include` fails here, not in a user's checkout.
 - `tar tzf` should list `src/`, `docs/decisions.md`, `scripts/`, `tests/`,
-  `README.md`, `LICENSE`, `pyproject.toml`, `PKG-INFO` and `.gitignore` — and
+  `README.md`, `LICENSE`, `pyproject.toml`, `PKG-INFO` and `.gitignore`, and
   neither `docs/publishing.md` nor `scripts/verify_move.py`.
-
-Build before tagging: a broken build costs nothing, while a pushed tag should
-never move.
 
 ## 4. Tag and push
 
@@ -89,69 +64,41 @@ never move.
 git tag -a vX.Y.Z -m "isabelle-layout X.Y.Z"
 git push origin main
 git push origin vX.Y.Z
-```
-
-`git push` does not push tags on its own, and the tag push is the whole GitHub
-publish — the workflow creates the Release on the runner, so nothing local
-needs `gh`. Actions resolves the workflow from the pushed ref rather than from
-the default branch, so it must already exist in the tagged commit's tree (it
-does). Re-pushing a tag is idempotent, so it repairs a bad publish rather than
-erroring:
-
-```sh
 curl -s https://api.github.com/repos/ott2/isabelle-layout/releases/tags/vX.Y.Z
 ```
 
-If the notes are wrong, fix them in a *new* commit, tag that, and push; the
-workflow edits an existing Release rather than failing. Never `--amend` a
-release commit that has been pushed — it leaves the branch a *sibling* of the
-remote rather than a descendant, and the only ways out are a force-push or a
-reconciling merge.
-
-Tag before uploading to PyPI, so the tag names the tree that produced the
-artefacts.
+Tag before uploading, so the tag names the tree that produced the artefacts.
+`git push` does not push tags on its own, and the tag push is the whole GitHub
+publish — the workflow creates the Release on the runner, so nothing local
+needs `gh`. Actions resolves it from the pushed ref, so it must already be in
+the tagged commit's tree (it is). Re-pushing a tag edits the existing Release,
+so wrong notes are fixed by a *new* commit, tagged and pushed; never by
+`--amend`, which leaves the branch a sibling of the remote, not a descendant.
 
 ## 5. Upload to PyPI
 
 ```sh
-.venv/bin/twine upload dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+.venv/bin/twine upload -r pypi dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
-The username is the literal string `__token__`, not an account name, and the
-token must be scoped to `isabelle-layout`. `~/.pypirc` at mode 600 avoids shell
-quoting, which matters because the token is long:
+`-r pypi` is spelled out though it is the default, so that `TWINE_REPOSITORY`
+cannot redirect the upload silently. A half-completed one is re-run with
+`--skip-existing`.
 
-```ini
-[distutils]
-index-servers =
-    pypi
-    testpypi
-
-[pypi]
-username = __token__
-password = pypi-AgEIcHlwaS5vcmc…
-```
-
-List **both** index servers if you write that file. Twine defaults
-`index-servers` to `pypi testpypi` and fills in both URLs, but only while the
-key is absent; naming just `pypi` silently removes TestPyPI's. Twine will
-otherwise prompt, which is fine. To pass the token in the environment instead,
-use `env` rather than a `VAR=value` prefix, so that the line works under any
-shell:
+The username is the literal `__token__` and the token is scoped to
+`isabelle-layout`. Keep both in `~/.pypirc` at mode 600, which avoids quoting a
+long token; if that file sets `index-servers`, list `pypi` **and** `testpypi`,
+because twine supplies default URLs for both only while the key is absent.
+Otherwise twine prompts, which is fine, or:
 
 ```sh
 env TWINE_USERNAME=__token__ TWINE_PASSWORD=… \
-    .venv/bin/twine upload dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+    .venv/bin/twine upload -r pypi dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
-A half-completed upload is re-run with the same arguments plus
-`--skip-existing`.
-
-**Trusted Publishing** would remove the token from this laptop: the upload
-comes from Actions over OIDC instead. Registering a *pending publisher* before
-a project's first upload also avoids the account-scoped token that a first
-upload otherwise requires, PyPI being unable to scope a token to a project that
-does not yet exist.
+**Trusted Publishing** would retire the token, uploading from Actions over
+OIDC; a *pending publisher* registered before a first upload also avoids the
+account-scoped token one otherwise needs.
 
 ## 6. Verify as a stranger would
 
@@ -162,23 +109,17 @@ python3 -m venv /tmp/real
 /tmp/real/bin/isabelle-layout --self-check
 ```
 
-That `python -c` stays on one line even though it is long. A `\` continuation
-*inside* double quotes is removed by sh, bash and zsh but survives as a real
-newline under csh and tcsh, where Python then rejects the indented second line.
-Continuations outside quotes, as in the `env` line above, are portable.
+Then look at the project page: `twine check` says nothing about how the README
+renders. Keep that `python -c` on one line — a `\` continuation inside double
+quotes survives as a newline under csh, and Python rejects the indented line.
 
-Then look at the project page and the Release. `twine check` says nothing about
-how the README actually renders.
+Finally, bump `version` to the next `.dev0` in its own commit, so an install
+from the checkout never claims to be the release.
 
-## 7. Afterwards
+## A TestPyPI rehearsal, if the packaging changes shape
 
-Bump `version` to the next `.dev0` in its own commit, so that an install from
-the checkout never claims to be the release.
-
-## A rehearsal on TestPyPI, if the packaging has changed shape
-
-TestPyPI is a **separate installation** — separate database, account, token and
-2FA. Registering on one gives nothing on the other.
+A separate installation — separate database, account, token and 2FA — and it
+spends that version number there too.
 
 ```sh
 .venv/bin/twine upload -r testpypi dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
@@ -186,19 +127,15 @@ python3 -m venv /tmp/tp
 /tmp/tp/bin/pip install --index-url https://test.pypi.org/simple/ --no-deps isabelle-layout
 ```
 
-`--no-deps` because TestPyPI does not mirror real PyPI, so any dependency
-resolves to whatever unrelated thing happens to sit there under that name. This
-package has none, so it changes nothing today — the habit is what stops a future
-dependency being silently satisfied by a stranger's package. A rehearsal
-consumes that version number on TestPyPI, so a second one needs a new version.
+`--no-deps` because TestPyPI does not mirror PyPI, so a dependency resolves to
+whatever unrelated thing sits there under that name. This package has none; the
+habit is what stops a future one being satisfied by a stranger's package.
 
 ## What cannot be undone
 
 - **A version number is permanent.** PyPI refuses a file for a version it has
   already seen, even after the release is deleted. A bad `X.Y.Z` is fixed by
-  publishing `X.Y.Z+1`, never by re-uploading.
-- **A pushed commit or tag is never rewritten.** No `--amend`, no moved tag, no
-  force-push — see `CLAUDE.md`.
-- **The author email is public**, on the project page and in the metadata of
-  every artefact ever downloaded.
-- **The name is claimed.** Already spent: `isabelle-layout` is ours.
+  publishing `X.Y.Z+1`.
+- **A pushed commit or tag is never rewritten** — see `CLAUDE.md`.
+- **The author email is public** in the metadata of every artefact downloaded.
+- **The name is claimed**, and already spent.
