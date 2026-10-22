@@ -64,36 +64,40 @@ tar tzf dist/isabelle_layout-X.Y.Z.tar.gz
 git tag -a vX.Y.Z -m "isabelle-layout X.Y.Z"
 git push origin main
 git push origin vX.Y.Z
-curl -s https://api.github.com/repos/ott2/isabelle-layout/releases/tags/vX.Y.Z
+gh run list -R ott2/isabelle-layout -L 3
+gh release view vX.Y.Z -R ott2/isabelle-layout
 ```
 
 Tag before uploading, so the tag names the tree that produced the artefacts.
 `git push` does not push tags on its own, and the tag push is the whole GitHub
-publish — the workflow creates the Release on the runner, so nothing local
-needs `gh`. Actions resolves it from the pushed ref, so it must already be in
-the tagged commit's tree (it is). Re-pushing a tag edits the existing Release,
-so wrong notes are fixed by a *new* commit, tagged and pushed; never by
-`--amend`, which leaves the branch a sibling of the remote, not a descendant.
+publish: the workflow creates the Release on the runner, and the two `gh`
+commands only read the result. Creating it locally with `gh release create`
+would put the notes somewhere other than the commit message, which is where
+this project keeps them. Actions resolves the workflow from the pushed ref, so
+it must already be in the tagged commit's tree (it is). Re-pushing a tag edits
+the existing Release, so wrong notes are fixed by a *new* commit, tagged and
+pushed; never by `--amend`, which leaves the branch a sibling of the remote,
+not a descendant.
 
 ## 5. Upload to PyPI
 
 ```sh
-.venv/bin/twine upload -r isabelle-layout dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
+.venv/bin/twine upload -r pypi-isabelle-layout dist/isabelle_layout-X.Y.Z-*.whl dist/isabelle_layout-X.Y.Z.tar.gz
 ```
 
-**Every project gets its own `~/.pypirc` section, named after the project**, so
-`-r` selects both the index and the token scoped to it. Nothing is passed on
-the command line or through the environment, where `ps` would show the token
-and the shell would remember it.
+**Every project gets its own `~/.pypirc` section, `pypi-<project>`**, so `-r`
+selects both the index and the token scoped to that project in one word.
+Nothing is passed on the command line or through the environment, where `ps`
+would show the token and the shell would remember it.
 
 ```ini
 [distutils]
 index-servers =
     pypi
     testpypi
-    isabelle-layout
+    pypi-isabelle-layout
 
-[isabelle-layout]
+[pypi-isabelle-layout]
 repository = https://upload.pypi.org/legacy/
 username = __token__
 password = pypi-AgEIcHlwaS5vcmc…
@@ -103,7 +107,8 @@ password = pypi-AgEIcHlwaS5vcmc…
 
 - **The section must be listed in `index-servers`.** Twine reads per-section
   keys only for the servers named there, so an unlisted section fails with
-  `Missing 'isabelle-layout' section` while sitting in plain sight in the file.
+  `Missing 'pypi-isabelle-layout' section` while sitting in plain sight in the
+  file.
 - **Any section not called `pypi` or `testpypi` needs `repository =`.** Those
   two names are the only ones twine supplies an upload URL for.
 - **Keep `testpypi` on the list.** Its default URL is injected only while it is
