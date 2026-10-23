@@ -2,8 +2,9 @@ r"""_cli.py — the demonstration command, and the completeness test for the API
 
 A library with ten public functions and no runnable use of them is a library
 whose surface has only ever been checked against itself.  `README.md` has
-snippets, the probes exercise three functions, and `verify_move.py` no longer
-runs.  This module is the missing thing: one program that uses the API the way
+snippets and the probes exercise three functions, which leaves most of the
+surface unexercised by anything a consumer would recognise as use.
+This module is the missing thing: one program that uses the API the way
 a consumer would, which doubles as a smoke test that an *installed wheel*
 works — the question the test suite deliberately cannot answer from inside the
 repository.

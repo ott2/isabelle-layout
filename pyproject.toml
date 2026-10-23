@@ -58,4 +58,4 @@ packages = ["src/isabelle_layout"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/", "docs/", "scripts/", "tests/", "README.md", "LICENSE"]
-exclude = ["docs/publishing.md", "scripts/verify_move.py"]
+exclude = ["docs/publishing.md"]

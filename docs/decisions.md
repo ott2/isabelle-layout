@@ -109,15 +109,22 @@ Isabelle distribution      18 ROOTs   135 sessions   1851 theories
 68362 comparisons, 0 disagreements
 ```
 
-`scripts/verify_move.py` produced it, and **can no longer reproduce it.** It
-first became unable to: `isabelle_query.common` was turned into a re-export of
+`scripts/verify_move.py` produced it, and the script is **gone** — deleted
+once it could no longer ask a question with the right answer.
+
+It expired in three stages. First `isabelle_query.common` became a re-export of
 this package, so the two "implementations" were the same function objects and
-the comparison would have passed vacuously — 68,362 checks of a function
-against itself, printing the same number as the real run. The script detects
-that and refuses rather than reporting a result it did not earn. `isabelle-query`
-has since deleted `common.py` altogether, so today the import fails and the
-refusal path is not even reached. Reproducing the number means checking
-`common.py` out at query's last pre-split commit.
+the comparison would have passed vacuously: 68,362 checks of a function against
+itself, printing the number above. It was taught to detect exactly that and
+refuse. Then `isabelle-query` deleted `common.py`, so the import failed before
+the refusal was reached. And finally — the reason deleting beat repairing —
+`[session-dirs]` and `[infra-shadow]` moved the load set deliberately, so a
+restored pre-split `common.py` *should* now disagree, and a tool whose success
+condition is "nothing disagreed" has the wrong success condition.
+
+The number stands as a record of the tree at the split. Reproducing it means
+this repository at `03a4d5a` and `isabelle-query` at `4d8b4dc`, which is the
+last commit where `common.py` was an implementation rather than a shim.
 
 That expiry is the argument for the conformance corpus being a shipped
 artefact rather than a script: the corpus keeps working when the thing it was

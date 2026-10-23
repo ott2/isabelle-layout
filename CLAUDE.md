@@ -116,7 +116,6 @@ repository, which is the one question that most needs asking — and two
 | `scripts/probe_against_isabelle.py` | **The strongest check there is**: `session_theories` against `isabelle build -n -l`, the real build's own dependency resolution. Expect `AGREES`. Needs Isabelle; ~5 min for the AFP. |
 | `scripts/probe_discovery_closure.py` | The load-set invariant over a real corpus. Needs no prover, and so can run anywhere — but a set uniformly too small satisfies it. Expect `CLOSED`. |
 | `scripts/build_conformance.py` | Regenerates the corpus, putting every case to `isabelle sessions -d`. Needs Isabelle on PATH. |
-| `scripts/verify_move.py` | **Expired, and now inert.** It differenced this package against the pre-split `isabelle_query.common`, a module `isabelle-query` has since deleted, so the import fails before its own refusal path is reached. Reproducing its number means checking `common.py` out at query's last pre-split commit. |
 
 ## Corpora and verification habits
 
@@ -318,12 +317,16 @@ is the first thing worth doing.
   clause was already deleted once for this reason; `SessionInfo.theories`'
   `dir_override` is always `None` and a test says so.
 - **Do not ship this project's release process in the sdist.**
-  `docs/publishing.md` and `scripts/verify_move.py` are excluded because they
-  are about releasing this package rather than about the code, and somebody
-  building from source has no use for either. Both stay in the repository.
+  `docs/publishing.md` is excluded because it is about releasing this package
+  rather than about the code, and somebody building from source has no use for
+  it. It stays in the repository.
 - **Do not add `.gitignore` to the sdist `exclude` list.** It was tried;
   hatchling ships the file regardless. A config line that does nothing is worse
   than the file it fails to remove, because the next reader believes it.
-- **Do not trust a verification that cannot fail.** `verify_move.py` would
-  have printed its original number while comparing functions with themselves.
-  If a check passes suspiciously easily, confirm it can still fail.
+- **Do not trust a verification that cannot fail.** The lesson is paid for:
+  `scripts/verify_move.py` differenced this package against the module it was
+  split out of, and once that module re-exported this one it would have
+  compared every function with itself and printed its original number —
+  68,362 checks, 0 disagreements, all vacuous. It was taught to detect that and
+  refuse, and later deleted. If a check passes suspiciously easily, confirm it
+  can still fail.

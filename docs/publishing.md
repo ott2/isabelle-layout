@@ -55,8 +55,9 @@ tar tzf dist/isabelle_layout-X.Y.Z.tar.gz
 - `build` makes the wheel *from the sdist*, so a file missing from the sdist's
   `include` fails here, not in a user's checkout.
 - `tar tzf` should list `src/`, `docs/decisions.md`, `scripts/`, `tests/`,
-  `README.md`, `LICENSE`, `pyproject.toml`, `PKG-INFO` and `.gitignore`, and
-  neither `docs/publishing.md` nor `scripts/verify_move.py`.
+  `README.md`, `LICENSE`, `pyproject.toml`, `PKG-INFO` and `.gitignore` — and
+  not `docs/publishing.md`, this file being about the release rather than the
+  code.
 
 ## 4. Tag and push
 
