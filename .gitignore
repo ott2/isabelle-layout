@@ -23,3 +23,8 @@ venv/
 
 # End-of-session handoff scratchpad -- rewritten each session.
 prompt.md
+
+# Working notes, one per topic.  Ignored rather than merely untracked, so that
+# a `git add -A` cannot sweep them into a commit -- which is how two of them
+# reached one.
+.scratch-*
