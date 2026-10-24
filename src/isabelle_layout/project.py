@@ -100,6 +100,41 @@ ENV_ROOT = "ISABELLE_LAYOUT_ROOT"
 LEGACY_ENV_ROOT = "ISABELLE_QUERY_ROOT"
 ENV_ROOTS = (ENV_ROOT, LEGACY_ENV_ROOT)
 
+# A marker file names one directory.  The cap is absurdly generous for that
+# and exists only so a reader cannot be handed something that is not one.
+_MAX_MARKER_BYTES = 64 * 1024
+
+
+def read_text_bounded(path: Path, limit: int) -> str:
+    """Read at most ``limit`` bytes of ``path`` as UTF-8, undecodable bytes
+    replaced.
+
+    Every file this package reads is written by somebody else, and two
+    failure modes follow from that which a bare ``Path.read_text()`` does not
+    survive.
+
+    **It raises on bytes that are not valid UTF-8** — and a `UnicodeDecodeError`
+    from one stray file aborts the whole enumeration around it, which is a
+    poor answer to "what sessions does this tree declare?" when every other
+    ROOT in the tree is fine.  Worse, a bare ``read_text()`` decodes with the
+    *locale's* encoding, so the same tree can parse differently on two
+    machines.  Both are settled by naming UTF-8 and replacing what will not
+    decode: Isabelle's own sources are UTF-8, and a file that is not is a file
+    whose ROOT syntax we are guessing at anyway.
+
+    **It is unbounded.**  Nothing in a ROOT or a theory header needs more than
+    a few kilobytes, so reading a whole file only matters when the file is
+    enormous — which, with no prover in the loop and an agent driving the
+    calls, is a memory cost paid for nothing.  Callers pass a limit sized
+    against what the corpora actually contain.
+
+    Truncation can split a multi-byte character; that costs one replacement
+    character at the very end of a prefix already far past anything the
+    grammar needs.
+    """
+    with path.open("rb") as fh:
+        return fh.read(limit).decode("utf-8", "replace")
+
 
 def _read_marker(marker: Path) -> Path | None:
     """Return the session directory named by a project marker file,
@@ -112,7 +147,7 @@ def _read_marker(marker: Path) -> Path | None:
     own directory as the root.
     """
     try:
-        lines = marker.read_text().splitlines()
+        lines = read_text_bounded(marker, _MAX_MARKER_BYTES).splitlines()
     except OSError:
         return None
     for line in lines:

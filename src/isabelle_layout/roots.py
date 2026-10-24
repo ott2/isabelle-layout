@@ -47,11 +47,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ._lexer import strip_comments
-from .project import default_t_dir
+from .project import default_t_dir, read_text_bounded
 
 
 # Keywords that terminate a `theories` or `directories` block in a ROOT
 # file (i.e. names of sibling clauses at the same nesting level).
+# A ROOT is a declaration file, not a document.  The largest in the AFP and
+# the Isabelle distribution together is the distribution's own `HOL/ROOT` at
+# 30 KB, so this is a thirty-fold margin — wide enough that no real ROOT can
+# reach it, narrow enough that a hostile one cannot be read into memory
+# unbounded.  The same cap covers the `ROOTS` index, which is a list of
+# directory names and smaller still.
+_MAX_ROOT_BYTES = 1024 * 1024
+
 _ROOT_BLOCK_TERMINATORS = (
     "theories", "document_files", "document_theories",
     "sessions", "options", "description", "chapter", "session",
@@ -87,7 +95,7 @@ def _parse_root_theories(root_path: Path) -> list[str]:
         return []
     theories: list[str] = []
     in_theories = False
-    for line in root_path.read_text().splitlines():
+    for line in read_text_bounded(root_path, _MAX_ROOT_BYTES).splitlines():
         stripped = line.strip()
         if re.match(r"theories\b", stripped):
             in_theories = True
@@ -117,7 +125,7 @@ def _parse_root_directories(root_path: Path) -> list[str]:
         return []
     subdirs: list[str] = []
     in_dirs = False
-    for line in root_path.read_text().splitlines():
+    for line in read_text_bounded(root_path, _MAX_ROOT_BYTES).splitlines():
         stripped = line.strip()
         if stripped.startswith("directories"):
             in_dirs = True
@@ -331,7 +339,7 @@ def parse_root_sessions(root_path: Path) -> list[SessionInfo]:
     """
     if not root_path.exists():
         return []
-    text = root_path.read_text(errors="replace")
+    text = read_text_bounded(root_path, _MAX_ROOT_BYTES)
     toks = list(_tokenize_root(text))
     out: list[SessionInfo] = []
     abs_root = root_path.resolve()
@@ -498,7 +506,7 @@ def discover_roots(root_dir: Path) -> list[Path]:
         add_root(d)
         index = d / "ROOTS"
         if index.is_file():
-            for line in index.read_text().splitlines():
+            for line in read_text_bounded(index, _MAX_ROOT_BYTES).splitlines():
                 entry = line.strip()
                 if not entry or entry.startswith("#"):
                     continue

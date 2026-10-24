@@ -50,6 +50,12 @@ both siblings put it.
 |-----|----------|--------|
 | `[layout-privates]` | A consumer imported eight private names. Promote them? | No, and nothing changed here. `isabelle-query` retired the shim that reached for them and now imports public names only, enforced on its side; so the privates stay private and may move in a patch release. |
 
+## Hardening, after a review of what hostile input can do
+
+| Tag | Question | Answer |
+|-----|----------|--------|
+| `[hostile-input]` | The files are written by somebody else and an agent chooses the call volume. What must not happen? | Three things, all now pinned by `tests/test_hostile_input.py`: undecodable bytes must not raise out of a public function, parsing must stay linear, and reads must be bounded by constants measured against the corpora. What is explicitly *not* done is confining what a ROOT declares — `isabelle build` honours a `directories` entry that is absolute or outside the tree, so rejecting one would under-report a legal session. Containment belongs to the caller. |
+
 ## Corrections after the first release was prepared
 
 | Tag | Fault | Found by |

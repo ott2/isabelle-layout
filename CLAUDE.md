@@ -305,6 +305,17 @@ is the first thing worth doing.
 
 ## What not to do
 
+- **Do not confine what a ROOT declares.** A `directories` entry may leave
+  the ROOT's own directory and may be absolute; `isabelle build -n -l` accepts
+  both and loads through them, so rejecting either would report fewer theories
+  than the build for a legal ROOT. Both are pinned in
+  `tests/test_session_theories.py`. Containment is a caller's concern, and
+  `README.md` tells callers so under **Reading untrusted projects**.
+- **Keep the parsers linear.** Input is attacker-authorable and call volume is
+  the consumer's to choose, so a lazy `.*?` that can scan to end-of-text on
+  every retry is a denial of service, not a slow path. `tests/test_hostile_input.py`
+  holds the budget; reads are bounded by constants measured against the
+  corpora, and lowering one means re-measuring.
 - **Do not rewrite the tokenizer.** It is correct about nesting comments and
   cartouches in ways that are easy to get wrong and hard to notice, and each
   behaviour is scar tissue from a named file: `Universal_Turing_Machine`

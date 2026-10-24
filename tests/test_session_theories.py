@@ -205,6 +205,37 @@ def test_a_directories_entry_may_leave_the_root_directory(tmp_path, write_tree):
     assert stems == {"T", "Neighbour"}
 
 
+def test_an_absolute_directories_entry_is_honoured(tmp_path, write_tree):
+    """`[session-dirs]`, the absolute case, which the relative one implies
+    but does not state.
+
+    Raised as a hardening question — a ROOT naming ``directories "/"`` makes
+    this package scan from the filesystem root — and answered the same way as
+    its sibling above, by asking rather than reasoning:
+
+        $ isabelle build -n -l -d /tmp/absdir/Entry A
+        Session Unsorted/A
+          /tmp/absdir/Shared/Neighbour.thy
+
+    Isabelle accepts the entry and loads through it, so a reader that
+    rejected absolute entries would report fewer theories than the build for
+    a legal ROOT — the same fault, in a rarer shape, that declined the
+    confinement guard above.  The breadth of the scan is therefore a
+    *caller's* concern, not a parser's: this package reports what the file
+    declares, and `README.md` says so under **Reading untrusted projects**.
+    """
+    shared = tmp_path / "Shared"
+    write_tree(tmp_path, {
+        "Entry/ROOT": 'session A = HOL +\n'
+                      f'  directories\n    "{shared}"\n'
+                      '  theories\n    Neighbour\n',
+        "Shared/Neighbour.thy": "theory Neighbour imports Main begin end\n",
+    })
+    (session,) = parse_root_sessions(tmp_path / "Entry" / "ROOT")
+    assert session.directories == [str(shared)]
+    assert [p for _n, p in session_theories(session)] == [shared / "Neighbour.thy"]
+
+
 def test_path_import_cannot_escape_entry(demo):
     # A path climbing above the entry root resolves to no in-entry theory
     # (containment guard), so it is not followed.

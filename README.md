@@ -101,6 +101,32 @@ consumers, who inherit a ceiling they did not choose. What detects a break is
 running your test suite against this package; a version range only decides when
 you are allowed to find out.
 
+### Reading untrusted projects
+
+Every file this package reads was written by somebody else, which matters if
+you point it at a repository you have not reviewed — an agent orienting itself
+in an unfamiliar tree, say. What the package guarantees:
+
+- **Malformed bytes do not raise.** Files are read as UTF-8 with undecodable
+  bytes replaced, so one bad file does not abort an enumeration, and a tree
+  parses the same on every machine regardless of locale.
+- **Reads are bounded.** A theory header is read from the first 64 KB, a
+  `ROOT` from the first 1 MB. Measured over the AFP and the distribution, the
+  deepest real header ends at 10,372 bytes and the largest real `ROOT` is
+  30 KB.
+- **Parsing is linear in the input**, including on text that opens a comment,
+  cartouche or `{* … *}` and never closes it.
+- **Import cycles terminate**, and no input causes unbounded recursion.
+
+What it does **not** do is decide that a project is lying about itself. A
+`ROOT` may legally declare `directories` outside its own tree, including an
+absolute path — `isabelle build` accepts that and loads through it, so this
+package reports it, and a `directories "/"` would have it scan from the
+filesystem root. If you need the answer confined to a subtree, confine it:
+compare each returned path against your own boundary. The package reports what
+the files declare; which of those declarations you are willing to act on is
+yours to decide.
+
 ### Why `session_theories` and not a `*.thy` glob
 
 A ROOT usually under-states what a session builds. AFP's `AODV` declares
