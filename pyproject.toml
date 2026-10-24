@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "isabelle-layout"
-version = "0.2.3.dev0"
+version = "0.2.3"
 description = "What structure an Isabelle project has, according to its own files — sessions, theory headers, and project roots read from ROOT files and .thy headers, with no Isabelle process involved."
 readme = "README.md"
 requires-python = ">=3.9"
